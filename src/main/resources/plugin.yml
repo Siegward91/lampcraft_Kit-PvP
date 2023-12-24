@@ -1,0 +1,8 @@
+name: KitPvP
+version: '${project.version}'
+main: siegward.kitpvp.KitPvP
+api-version: '1.18'
+commands:
+  KitPvP:
+    aliases:
+      - pvp
