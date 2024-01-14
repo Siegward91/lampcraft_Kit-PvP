@@ -1,16 +1,25 @@
 package siegward.kitpvp;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.EnderPearl;
-import org.bukkit.entity.Player;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.*;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 public class commands implements CommandExecutor {
     KitPvP plugin = KitPvP.getPlugin();
@@ -106,11 +115,133 @@ public class commands implements CommandExecutor {
                         p.setCooldown(item,cooldown);
                     }
 
-                }else if (args[1].equalsIgnoreCase("royal.escape")){
+                }else if (args[1].equalsIgnoreCase("royal.firework")){
                     int cost = 40;
-                    int cooldown = 20;
+                    int cooldown = 10;
+                    Material item = p.getInventory().getItemInMainHand().getType();
+                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
+                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost){
+                        p.setExp(p.getExp() - tcost);
 
+                        Set<Entity> list = new HashSet<>();
+                        //область
+                        list.addAll(Objects.requireNonNull(p.getWorld()).getNearbyEntities(p.getEyeLocation().add(p.getEyeLocation().getDirection().multiply(2)), 2.0,2.0, 2.0));
+                        list.remove(p);
+                        for (Entity i: list){
+                            LivingEntity e = (LivingEntity) i;
+                            if ((e.getType().equals(EntityType.PLAYER) || e.getMetadata("alive").get(0).asBoolean()) && (!e.getMetadata("team").get(0).equals("null") || !e.getMetadata("team").get(0).equals(p.getMetadata("team").get(0)))){
+                                Vector v = p.getEyeLocation().getDirection();
+                                double X1 = p.getEyeLocation().getDirection().getX();
+                                double Z1 = p.getEyeLocation().getDirection().getZ();
+                                double x2 = X1/Math.pow(X1*X1 + Z1*Z1, 0.5);
+                                double z2 = Z1/Math.pow(X1*X1 + Z1*Z1, 0.5);
+                                v.setY(0.2).setX(x2).setZ(z2);
+                                e.setVelocity(v.multiply(1.5));
+                            }
+                        }
+                        p.setVelocity(p.getEyeLocation().getDirection().multiply(-1));
+
+                        p.setCooldown(item,cooldown);
+
+                    }
+                }else if (args[1].equalsIgnoreCase("robin.bolt")){
+                    int cost = 80;
+                    int cooldown = 20;
+                    Material item = p.getInventory().getItemInMainHand().getType();
+                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
+                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost && (p.getInventory().contains(Material.ARROW) || p.getInventory().contains(Material.TIPPED_ARROW))){
+                        if (p.getInventory().contains(Material.ARROW)){
+                            Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"clear " + p.getName() + " minecraft:arrow 1");
+                        }else{
+                            Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"clear " + p.getName() + " minecraft:tipped_arrow 1");
+                        }
+                        p.setExp(p.getExp() - tcost);
+
+                        Set<Entity> list = new HashSet<>();
+                        Vector v = p.getEyeLocation().getDirection().multiply(1.5);
+                        BukkitRunnable arrow = new BukkitRunnable() {
+                            Location l = p.getEyeLocation();
+                            int time = 0;
+                            @Override
+                            public void run() {
+                                if (time < 60) {
+                                    //частицы
+                                    for (Player i : Bukkit.getOnlinePlayers()){
+                                        i.spawnParticle(Particle.EXPLOSION_LARGE,l,1);
+                                    }
+
+                                    list.addAll(Objects.requireNonNull(p.getWorld()).getNearbyEntities(l, 1.0, 1.0, 1.0));
+                                    list.remove(p);
+                                    for (Entity i : list) {
+                                        LivingEntity e = (LivingEntity) i;
+                                        if ((e.getType().equals(EntityType.PLAYER) || e.getMetadata("alive").get(0).asBoolean()) && (!e.getMetadata("team").get(0).equals("null") || !e.getMetadata("team").get(0).equals(p.getMetadata("team").get(0)))) {
+                                            e.damage(10.0, p);
+                                        }
+                                    }
+                                    list.clear();
+                                    l = l.add(v);
+                                    time++;
+                                }else {
+                                    this.cancel();
+                                }
+                            }
+                        };
+                        arrow.runTaskTimer(plugin,0,1);
+                        p.setCooldown(item,cooldown);
+                    }
+
+                }else if (args[1].equalsIgnoreCase("inventor.rebuild")){
+                    int cooldown = 20;
+                    Material item = p.getInventory().getItemInMainHand().getType();
+                    if (p.getCooldown(item) == 0){
+                        if (p.getExp() >= 0.99){
+                            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 40, 1,false,false,true));
+                            p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 2,false,false,true));
+                        }
+                        p.setExp(0f);
+                        int slot = -1;
+                        for (int i = 0; i < 10; i++){
+                            if (p.getInventory().getItem(i) != null && p.getInventory().getItem(i).getType().equals(Material.CROSSBOW)){
+                                slot = i;
+                                break;
+                            }
+                        }
+                        if (slot != -1){
+                            //дробаш 1, снайперка 0
+                            int mode = p.getInventory().getItem(slot).getEnchantmentLevel(Enchantment.QUICK_CHARGE);
+                            Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"clear " + p.getName() + " minecraft:crossbow 1");
+                            switch (mode){
+                                case 0:
+                                    Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"cmi kit inventor.shotgun " + p.getName());
+                                    break;
+                                case 1:
+                                    Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"cmi kit inventor.pp " + p.getName());
+                                    break;
+                            }
+                        }
+
+                        p.setCooldown(item,cooldown);
+                    }
+                }else if (args[1].equalsIgnoreCase("chaotic.snowball")){
+                    int cost = 50;
+                    Material item = p.getInventory().getItemInMainHand().getType();
+                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
+                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost){
+                        p.setExp(p.getExp() - tcost);
+                        p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection()).setMetadata("data", new FixedMetadataValue(plugin, "chaotic.snowball"));
+                    }
+                }else if (args[1].equalsIgnoreCase("chaotic.claster")){
+                    int cooldown = 20;
+                    int cost = 50;
+                    Material item = p.getInventory().getItemInMainHand().getType();
+                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
+                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost){
+                        p.setExp(p.getExp() - tcost);
+                        p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection()).setMetadata("data", new FixedMetadataValue(plugin, "chaotic.snowball"));
+
+                    }
                 }
+                //вот над надписью
             }
         }
         return true;

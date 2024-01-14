@@ -2,18 +2,24 @@ package siegward.kitpvp;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.entity.Player;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.Random;
 
 public class listeners implements Listener {
     KitPvP plugin = KitPvP.getPlugin();
@@ -145,6 +151,37 @@ public class listeners implements Listener {
                     k.setExp(0.9999f);
                 }
             }
+        }
+    }
+    @EventHandler
+    public void OnShoot(EntityShootBowEvent e){
+        Player p = (Player) e.getEntity();
+        if (p.getMetadata("kit").get(0).asString().equals("inventor")){
+            int mode = e.getBow().getEnchantmentLevel(Enchantment.QUICK_CHARGE);
+            switch (mode){
+                case 0:
+                    e.getProjectile().setVelocity(e.getProjectile().getVelocity().multiply(2));
+                    e.getProjectile().setInvulnerable(true);
+                    break;
+                case 1:
+                    e.setCancelled(true);
+                    Random r = new Random();
+                    for (int i = 0;i <= 18; i ++){
+                        p.launchProjectile(Arrow.class,e.getProjectile().getVelocity().multiply(0.5).rotateAroundX(r.nextDouble(-0.3,0.3)).rotateAroundY(r.nextDouble(-0.3,0.3)).rotateAroundZ(r.nextDouble(-0.3,0.3)));
+                    }
+                    break;
+            }
+        }
+    }
+
+    @EventHandler
+    public void OnProjHit(ProjectileHitEvent e){
+        if (e.getEntity().getType().equals(EntityType.SNOWBALL) && e.getEntity().getMetadata("data").get(0).asString().equals("chaotic.snowball")){
+            e.setCancelled(true);
+            TNTPrimed tnt = (TNTPrimed) Bukkit.getWorld("world").spawnEntity(e.getEntity().getLocation(), EntityType.PRIMED_TNT);
+            tnt.setFuseTicks(0);
+            //tnt.setSource(p);
+            tnt.setYield(1.85f);
         }
     }
 }
