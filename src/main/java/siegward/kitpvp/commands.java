@@ -1,247 +1,180 @@
 package siegward.kitpvp;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
 
 public class commands implements CommandExecutor {
     KitPvP plugin = KitPvP.getPlugin();
     @Override
     public boolean onCommand(@NotNull CommandSender Sender, @NotNull Command command, @NotNull String s, @NotNull String[] args) {
         if (command.getName().equalsIgnoreCase("KitPvP")){
-            if (args[0].equalsIgnoreCase("kit") && args.length == 3) {
-                Player p = Bukkit.getPlayer(args[1]);
-                p.setMetadata("kit", new FixedMetadataValue(plugin, args[2]));
-                p.setMetadata("combat", new FixedMetadataValue(plugin, 0));
-                p.setMetadata("resource", new FixedMetadataValue(plugin, 100));
-                Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "cmi kit " + args[2] + " " + p.getName());
-                p.setShieldBlockingDelay(0);
-                p.setMaxHealth(20.0);
-                p.setHealth(20.0);
-                p.setLevel(0);
-                p.setExp(0.9999f);
-                p.setWalkSpeed(0.2f);
-                switch (p.getMetadata("kit").get(0).asString()) {
+            if (args[0].equalsIgnoreCase("help") && Sender instanceof Player){
+                //plugin.getLogger().
+                Sender.sendMessage(Component.text("/pvp kit <kit> <Player>").color(NamedTextColor.YELLOW));
+                Sender.sendMessage(Component.text("/pvp use <ability> <Player>").color(NamedTextColor.YELLOW));
+                Sender.sendMessage(Component.text("/pvp team <team> <Player>").color(NamedTextColor.YELLOW));
+                Sender.sendMessage(Component.text("/pvp help").color(NamedTextColor.YELLOW));
+            }else if (args[0].equalsIgnoreCase("kit") && args.length == 3) {
+                Player p = Bukkit.getPlayer(args[2]);
+                assert p != null;
+                Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "cmi kit " + args[1] + " " + p.getName());
+                KitType kit;
+                switch (args[1]) {
+                    //воины
                     case "assassin":
+                        kit = KitType.ASSASSIN;
+                        PlayerManager.addPlayer(p,kit);
                         p.setWalkSpeed(0.23f);
+                        //p.showTitle(Title.title(Component.text("123"),Component.text("456"), Title.Times.times(Duration.ofSeconds(10),Duration.ZERO,Duration.ZERO)));
+                        //p.sendActionBar(Component.text("123"));
+
                         break;
                     case "knight":
-                        p.setMetadata("resource", new FixedMetadataValue(plugin, 200));
-                        p.setExp(0f);
+                        kit = KitType.KNIGHT;
+                        PlayerManager.addPlayer(p,kit);
                         p.setWalkSpeed(0.18f);
                         break;
-                    case "dark":
+                    case "merc":
+                        kit = KitType.MERC;
+                        PlayerManager.addPlayer(p,kit);
+                        break;
+
+                    //стрелки
+                    case "robin":
+                        kit = KitType.ROBIN;
+                        PlayerManager.addPlayer(p,kit);
+                        break;
+                    case "steampunk":
+                        kit = KitType.STEAMPUNK;
+                        PlayerManager.addPlayer(p,kit);
+                        break;
+                    case "royal":
+                        kit = KitType.ROYAL;
+                        PlayerManager.addPlayer(p,kit);
+                        break;
+
+                    //маги
                     case "chaotic":
+                        kit = KitType.CHAOTIC;
+                        PlayerManager.addPlayer(p,kit);
+                        break;
+                    case "satanist":
+                        kit = KitType.SATANIST;
+                        PlayerManager.addPlayer(p,kit);
+                        break;
                     case "pyro":
-                    case "undead":
-                    case "necromancer":
+                        kit = KitType.PYRO;
+                        PlayerManager.addPlayer(p,kit);
+                        break;
+
+                    //призыватели
                     case "creeperman":
-                        p.setMetadata("resource", new FixedMetadataValue(plugin, 2000));
+                        kit = KitType.CREEPERMAN;
+                        PlayerManager.addPlayer(p,kit);
+                        break;
+                    case "necromancer":
+                        kit = KitType.NECROMANCER;
+                        PlayerManager.addPlayer(p,kit);
+                        break;
+                    case "undead":
+                        kit = KitType.UNDEAD;
+                        PlayerManager.addPlayer(p,kit);
                         break;
                 }
             }else if (args[0].equalsIgnoreCase("team") && args.length == 3){
-                Player p = Bukkit.getPlayer(args[1]);
-                p.setMetadata("team", new FixedMetadataValue(plugin,args[2]));
-            }else if (args[0].equalsIgnoreCase("use") && args.length == 3){
                 Player p = Bukkit.getPlayer(args[2]);
+                switch (args[1]) {
+                    case "red":
+                        PlayerManager.setPlayerTeam(p,TeamType.RED);
+                        break;
+                    case "blue":
+                        PlayerManager.setPlayerTeam(p,TeamType.BLUE);
+                        break;
+                    default:
+                        PlayerManager.setPlayerTeam(p,null);
+                        break;
+                }
+            }else if (args[0].equalsIgnoreCase("use") && args.length == 3){
+                PlayerModel m = PlayerManager.getModelByPlayer(Bukkit.getPlayer(args[2]));
+                assert m != null;
 
                 //способности
-                if (args[1].equalsIgnoreCase("knight.armor")){
-                    int cost = 20;
-                    int cooldown = 240;
-                    Material item = p.getInventory().getItemInMainHand().getType();
-                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
-                    if ((p.getCooldown(item) == 0 && p.getExp() >= tcost) || (p.hasPotionEffect(PotionEffectType.INCREASE_DAMAGE))){
-                        if (!p.hasPotionEffect(PotionEffectType.INCREASE_DAMAGE)) {
-                            p.setExp(p.getExp() - tcost);
-                        }
-                        double Before = p.getAbsorptionAmount();
-                        p.setAbsorptionAmount(Before + 12.0);
-                        BukkitRunnable timer = new BukkitRunnable() {
-                            int timer = 0;
-                            @Override
-                            public void run() {
-                                if (p.getAbsorptionAmount() <= Before || timer >= 100){
-                                    if (timer >= 100){
-                                        p.setAbsorptionAmount(Before);
-                                    }
-                                    p.setCooldown(item, cooldown);
-                                    this.cancel();
-                                }
-                                timer++;
-                            }
-                        };
-                        timer.runTaskTimer(plugin,0,1);
-                    }
+                switch (args[1]){
+                    case "knight.armor":
+                        KitManager.knightArmor(m);
+                        break;
+                    case "assassin.pearl":
+                        KitManager.assassinPearl(m);
+                        break;
+                    case "merc.dash":
+                        KitManager.mercDash(m);
+                        break;
 
+                    case "royal.firework":
+                        KitManager.royalFirework(m);
+                        break;
+                    case "robin.bolt":
+                        KitManager.robinBolt(m);
+                        break;
+                    case "steampunk.rebuild":
+                        KitManager.steampunkRebuild(m);
+                        break;
 
-                }else if (args[1].equalsIgnoreCase("assassin.pearl")){
-                    int cost = 60;
-                    int cooldown = 10;
-                    Material item = p.getInventory().getItemInMainHand().getType();
-                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
-                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost){
-                        p.setExp(p.getExp() - tcost);
-                        p.launchProjectile(EnderPearl.class, p.getEyeLocation().getDirection().multiply(3));
-                        p.setCooldown(item,cooldown);
+                    case "chaotic.snowball":
+                        KitManager.chaoticSnowball(m);
+                        break;
+                    case "chaotic.cluster":
+                        KitManager.chaoticCluster(m);
+                        break;
+                    case "chaotic.c4":
+                        KitManager.chaoticC4(m);
+                        break;
+                    case "chaotic.boom":
+                        KitManager.chaoticExplodeC4(m);
+                        break;
+                    case "satanist.skull":
+                        KitManager.satanistSkull(m);
+                        break;
+                    case "satanist.egg":
+                        KitManager.satanistEgg(m);
+                        break;
+                    case "pyro.":
+                        //TODO обсудить огненного мага
+                        break;
+                    case "pyro..":
 
-                    }
+                        break;
+                    case "pyro...":
 
-                }else if (args[1].equalsIgnoreCase("merc.dash")){
-                    int cost = 40;
-                    int cooldown = 20;
-                    Material item = p.getInventory().getItemInMainHand().getType();
-                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
-                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost) {
-                        p.setExp(p.getExp() - tcost);
-                        p.setVelocity(p.getEyeLocation().getDirection().add(p.getEyeLocation().getDirection().setX(0).setY(0.2).setZ(0)).multiply(1.5));
-                        p.setCooldown(item,cooldown);
-                    }
+                        break;
 
-                }else if (args[1].equalsIgnoreCase("royal.firework")){
-                    int cost = 40;
-                    int cooldown = 10;
-                    Material item = p.getInventory().getItemInMainHand().getType();
-                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
-                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost){
-                        p.setExp(p.getExp() - tcost);
-
-                        Set<Entity> list = new HashSet<>();
-                        //область
-                        list.addAll(Objects.requireNonNull(p.getWorld()).getNearbyEntities(p.getEyeLocation().add(p.getEyeLocation().getDirection().multiply(2)), 2.0,2.0, 2.0));
-                        list.remove(p);
-                        for (Entity i: list){
-                            LivingEntity e = (LivingEntity) i;
-                            if ((e.getType().equals(EntityType.PLAYER) || e.getMetadata("alive").get(0).asBoolean()) && (!e.getMetadata("team").get(0).equals("null") || !e.getMetadata("team").get(0).equals(p.getMetadata("team").get(0)))){
-                                Vector v = p.getEyeLocation().getDirection();
-                                double X1 = p.getEyeLocation().getDirection().getX();
-                                double Z1 = p.getEyeLocation().getDirection().getZ();
-                                double x2 = X1/Math.pow(X1*X1 + Z1*Z1, 0.5);
-                                double z2 = Z1/Math.pow(X1*X1 + Z1*Z1, 0.5);
-                                v.setY(0.2).setX(x2).setZ(z2);
-                                e.setVelocity(v.multiply(1.5));
-                            }
-                        }
-                        p.setVelocity(p.getEyeLocation().getDirection().multiply(-1));
-
-                        p.setCooldown(item,cooldown);
-
-                    }
-                }else if (args[1].equalsIgnoreCase("robin.bolt")){
-                    int cost = 80;
-                    int cooldown = 20;
-                    Material item = p.getInventory().getItemInMainHand().getType();
-                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
-                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost && (p.getInventory().contains(Material.ARROW) || p.getInventory().contains(Material.TIPPED_ARROW))){
-                        if (p.getInventory().contains(Material.ARROW)){
-                            Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"clear " + p.getName() + " minecraft:arrow 1");
-                        }else{
-                            Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"clear " + p.getName() + " minecraft:tipped_arrow 1");
-                        }
-                        p.setExp(p.getExp() - tcost);
-
-                        Set<Entity> list = new HashSet<>();
-                        Vector v = p.getEyeLocation().getDirection().multiply(1.5);
-                        BukkitRunnable arrow = new BukkitRunnable() {
-                            Location l = p.getEyeLocation();
-                            int time = 0;
-                            @Override
-                            public void run() {
-                                if (time < 60) {
-                                    //частицы
-                                    for (Player i : Bukkit.getOnlinePlayers()){
-                                        i.spawnParticle(Particle.EXPLOSION_LARGE,l,1);
-                                    }
-
-                                    list.addAll(Objects.requireNonNull(p.getWorld()).getNearbyEntities(l, 1.0, 1.0, 1.0));
-                                    list.remove(p);
-                                    for (Entity i : list) {
-                                        LivingEntity e = (LivingEntity) i;
-                                        if ((e.getType().equals(EntityType.PLAYER) || e.getMetadata("alive").get(0).asBoolean()) && (!e.getMetadata("team").get(0).equals("null") || !e.getMetadata("team").get(0).equals(p.getMetadata("team").get(0)))) {
-                                            e.damage(10.0, p);
-                                        }
-                                    }
-                                    list.clear();
-                                    l = l.add(v);
-                                    time++;
-                                }else {
-                                    this.cancel();
-                                }
-                            }
-                        };
-                        arrow.runTaskTimer(plugin,0,1);
-                        p.setCooldown(item,cooldown);
-                    }
-
-                }else if (args[1].equalsIgnoreCase("inventor.rebuild")){
-                    int cooldown = 20;
-                    Material item = p.getInventory().getItemInMainHand().getType();
-                    if (p.getCooldown(item) == 0){
-                        if (p.getExp() >= 0.99){
-                            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 40, 1,false,false,true));
-                            p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 2,false,false,true));
-                        }
-                        p.setExp(0f);
-                        int slot = -1;
-                        for (int i = 0; i < 10; i++){
-                            if (p.getInventory().getItem(i) != null && p.getInventory().getItem(i).getType().equals(Material.CROSSBOW)){
-                                slot = i;
-                                break;
-                            }
-                        }
-                        if (slot != -1){
-                            //дробаш 1, снайперка 0
-                            int mode = p.getInventory().getItem(slot).getEnchantmentLevel(Enchantment.QUICK_CHARGE);
-                            Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"clear " + p.getName() + " minecraft:crossbow 1");
-                            switch (mode){
-                                case 0:
-                                    Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"cmi kit inventor.shotgun " + p.getName());
-                                    break;
-                                case 1:
-                                    Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"cmi kit inventor.pp " + p.getName());
-                                    break;
-                            }
-                        }
-
-                        p.setCooldown(item,cooldown);
-                    }
-                }else if (args[1].equalsIgnoreCase("chaotic.snowball")){
-                    int cost = 50;
-                    Material item = p.getInventory().getItemInMainHand().getType();
-                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
-                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost){
-                        p.setExp(p.getExp() - tcost);
-                        p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection()).setMetadata("data", new FixedMetadataValue(plugin, "chaotic.snowball"));
-                    }
-                }else if (args[1].equalsIgnoreCase("chaotic.claster")){
-                    int cooldown = 20;
-                    int cost = 50;
-                    Material item = p.getInventory().getItemInMainHand().getType();
-                    float tcost = (float) cost /p.getMetadata("resource").get(0).asInt();
-                    if (p.getCooldown(item) == 0 && p.getExp() >= tcost){
-                        p.setExp(p.getExp() - tcost);
-                        p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection()).setMetadata("data", new FixedMetadataValue(plugin, "chaotic.snowball"));
-
-                    }
+                    case "creeperman.summon":
+                        KitManager.creepermanSummon(m);
+                        break;
+                    case "creeperman.bombjump":
+                        KitManager.creepermanBombJump(m);
+                        break;
+                    case "necromancer.summon":
+                        KitManager.necromancerSummon(m);
+                        break;
+                    case "necromander.pentagram":
+                        KitManager.necromancerPentagram(m);
+                        break;
+                    case "undead.summon":
+                        KitManager.undeadSummon(m);
+                        break;
+                    case "undead.disaster":
+                        KitManager.undeadDisaster(m);
+                        break;
                 }
-                //вот над надписью
+
             }
         }
         return true;

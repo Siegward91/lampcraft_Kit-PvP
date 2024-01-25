@@ -1,122 +1,71 @@
 package siegward.kitpvp;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
+import org.bukkit.Particle;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityShootBowEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.metadata.MetadataValue;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.util.Vector;
 
-import java.util.Random;
+import java.util.Objects;
 
 public class listeners implements Listener {
     KitPvP plugin = KitPvP.getPlugin();
     @EventHandler
     public void OnJoin(PlayerJoinEvent e){
-        Player p = e.getPlayer();
-        p.setMetadata("kit", new FixedMetadataValue(plugin,"null"));
-        p.setMetadata("team", new FixedMetadataValue(plugin,"null"));
-        p.setMetadata("combat", new FixedMetadataValue(plugin,0));
-        p.setMetadata("resource", new FixedMetadataValue(plugin,100));
-        p.setMaxHealth(20.0);
-        p.setHealth(20.0);
-        p.setWalkSpeed(0.2f);
-        p.setLevel(0);
-        p.setExp(0.9999f);
+
     }
 
     @EventHandler
     public void OnRespawn(PlayerRespawnEvent e){
         Player p = e.getPlayer();
-        BukkitRunnable lildelay = new BukkitRunnable() {
-            @Override
-            public void run() {
-                Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"clear " + p.getName());
-                p.setMetadata("kit", new FixedMetadataValue(plugin,"null"));
-                p.setMetadata("team", new FixedMetadataValue(plugin,"null"));
-                p.setMetadata("combat", new FixedMetadataValue(plugin,0));
-                p.setMetadata("resource", new FixedMetadataValue(plugin,100));
-                p.setMaxHealth(20.0);
-                p.setHealth(20.0);
-                p.setWalkSpeed(0.2f);
-                p.setLevel(0);
-                p.setExp(0.9999f);
-                this.cancel();
-            }
-        };
-        lildelay.runTaskTimer(plugin,1,5);
+        p.setHealth(p.getMaxHealth());
     }
 
     @EventHandler
     public void OnDamage(EntityDamageByEntityEvent e){
         if (e.getEntity() instanceof Player){
-            Player t = (Player) e.getEntity();
+            Player target = (Player) e.getEntity();
+            PlayerModel targetModel = PlayerManager.getModelByPlayer(target);
+            if (targetModel == null) return;
             if (e.getDamager() instanceof Player){
-                Player d = (Player) e.getDamager();
-                if (t.getMetadata("team").get(0).asString().equals(t.getMetadata("team").get(0).asString()) && !t.getMetadata("team").get(0).asString().equalsIgnoreCase("null")){
+                Player damager = (Player) e.getDamager();
+                PlayerModel damagerModel = PlayerManager.getModelByPlayer(damager);
+                if (damagerModel == null) return;
+                if (PlayerManager.isInSameTeam(damager,target)){
                     e.setCancelled(true);
                     return;
                 }
-                if (d.getMetadata("combat").get(0).asInt() ==  0){
-                    d.setMetadata("combat", new FixedMetadataValue(plugin,600));
-                    BukkitRunnable combat = new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            if (d.getMetadata("combat").get(0).asInt() > 0){
-                                d.setMetadata("combat", new FixedMetadataValue(plugin,d.getMetadata("combat").get(0).asInt() - 1));
-                            }else {
-                                this.cancel();
-                            }
-                        }
-                    };
-                    combat.runTaskTimer(plugin,0,1);
-                }else {
-                    d.setMetadata("combat", new FixedMetadataValue(plugin,600));
-                }
+                //TODO сделать комбат мод ну или забить
+                //TODO вынести проверку и добавить ласт демедж
             }
-            if (t.getMetadata("kit").get(0).asString().equalsIgnoreCase("merc") && t.isBlocking() && e.getFinalDamage() == 0){
-                if (!t.hasPotionEffect(PotionEffectType.INCREASE_DAMAGE)){
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 100, 0,false,false,true));
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 100, 0,false,false,true));
-                }else if (t.getPotionEffect(PotionEffectType.INCREASE_DAMAGE).getAmplifier() == 0){
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 100, 1,false,false,true));
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 100, 0,false,false,true));
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 100, 0,false,false,true));
-                }else if (t.getPotionEffect(PotionEffectType.INCREASE_DAMAGE).getAmplifier() == 1){
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, t.getPotionEffect(PotionEffectType.INCREASE_DAMAGE).getDuration() + 60, 1,false,false,true));
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, t.getPotionEffect(PotionEffectType.DAMAGE_RESISTANCE).getDuration() + 60, 0,false,false,true));
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, t.getPotionEffect(PotionEffectType.SPEED).getDuration() + 60, 0,false,false,true));
-                }
+
+            if (targetModel.getKit().equals(KitType.MERC) && target.isBlocking() && e.getFinalDamage() == 0) {
+                KitManager.mercShieldBlocking(targetModel, e);
             }
-            if (t.getMetadata("kit").get(0).asString().equalsIgnoreCase("knight") && !t.hasPotionEffect(PotionEffectType.INCREASE_DAMAGE)){
-                t.setExp(Math.min(0.9999f, (float) (t.getExp() + ((e.getDamage()*7)/t.getMetadata("resource").get(0).asInt()))));
-                if (t.getExp() >= 0.9999f){
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 250, 1,false,false,true));
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 250, 0,false,false,true));
-                    t.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 250, 1,false,false,true));
-                    BukkitRunnable rage = new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            if (t.getExp() == 0) {
-                                this.cancel();
-                            }
-                            t.setExp(Math.max(0f, t.getExp() - (float) (0.83 / t.getMetadata("resource").get(0).asInt())));
-                        }
-                    };
-                    rage.runTaskTimer(plugin,0,1);
-                }
+            if (targetModel.getKit().equals(KitType.KNIGHT)) {
+                KitManager.knightTakingDamage(targetModel);
+            }
+        }
+        if(e.getDamager() instanceof Arrow){
+            LivingEntity entity = (LivingEntity) e.getEntity();
+            Projectile j = (Projectile) e.getDamager();
+            //попытка сделать дробовик нормальным(имба обосраная)
+            if (j.getMetadata("type").get(0).asString().equalsIgnoreCase("steampunk.shotgun")){
+                e.setCancelled(true);
+                j.remove();
+                entity.setHealth(Math.max(0,entity.getHealth() - e.getDamage()));
+                entity.setLastDamageCause(new EntityDamageEvent(Objects.requireNonNull(Bukkit.getPlayer(j.getMetadata("source").get(0).asString())), EntityDamageEvent.DamageCause.PROJECTILE, e.getDamage()));
             }
         }
     }
@@ -124,64 +73,75 @@ public class listeners implements Listener {
     @EventHandler
     public void OnDeath(PlayerDeathEvent e){
         Player p = e.getPlayer();
-        if (p.getMetadata("combat").get(0).asInt() > 0){
-            ItemStack soul = new ItemStack(Material.NETHER_STAR,1);
-            p.getWorld().dropItem(p.getLocation(),soul);
-        }
+        PlayerModel playerModel = PlayerManager.getModelByPlayer(p);
+        if (playerModel == null) return;
+        //if (playerModel.getCombatMode() > 0){
+        ItemStack soul = new ItemStack(Material.NETHER_STAR,1);
+        ItemMeta soulItemMeta = soul.getItemMeta();
+        soulItemMeta.displayName(Component.text("Потерянная душа").color(NamedTextColor.AQUA));
+        p.getWorld().dropItem(p.getLocation(),soul);
+        //}
+        PlayerManager.removePlayer(p);
+
+
         if (p.getKiller() != null) {
-            Player k = p.getKiller();
-            if (k.getMetadata("kit").get(0).asString().equalsIgnoreCase("assassin") || k.getMetadata("kit").get(0).asString().equalsIgnoreCase("merc") || k.getMetadata("kit").get(0).asString().equalsIgnoreCase("knight")){
-                BukkitRunnable PassiveHealing = new BukkitRunnable() {
-                    int timer = 0;
-                    @Override
-                    public void run() {
-                        if (timer < 8) {
-                            k.setHealth(Math.min(k.getMaxHealth(), k.getHealth() + k.getMaxHealth()/16));
-                        }else {
-                            this.cancel();
-                        }
-                        timer++;
-                    }
-                };
-                PassiveHealing.runTaskTimer(plugin, 0,5);
-                if (k.getMetadata("kit").get(0).asString().equalsIgnoreCase("knight") && k.hasPotionEffect(PotionEffectType.INCREASE_DAMAGE)){
-                    k.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 250, 1,false,false,true));
-                    k.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 250, 0,false,false,true));
-                    k.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 250, 1,false,false,true));
-                    k.setExp(0.9999f);
-                }
+            Player killer = p.getKiller();
+            PlayerModel killerModel = PlayerManager.getModelByPlayer(killer);
+
+            if (killerModel == null) return;
+            if (killerModel.getKit().equals(KitType.ASSASSIN) || killerModel.getKit().equals(KitType.KNIGHT) || killerModel.getKit().equals(KitType.MERC)) {
+                KitManager.meleeHealingAfterKill(killerModel);
+            }
+            if (killerModel.getKit().equals(KitType.KNIGHT) && killerModel.getResourceDifferencePerSecond() == -20) {
+                KitManager.knightRageOnKill(killerModel);
             }
         }
     }
     @EventHandler
     public void OnShoot(EntityShootBowEvent e){
-        Player p = (Player) e.getEntity();
-        if (p.getMetadata("kit").get(0).asString().equals("inventor")){
-            int mode = e.getBow().getEnchantmentLevel(Enchantment.QUICK_CHARGE);
-            switch (mode){
-                case 0:
-                    e.getProjectile().setVelocity(e.getProjectile().getVelocity().multiply(2));
-                    e.getProjectile().setInvulnerable(true);
-                    break;
-                case 1:
-                    e.setCancelled(true);
-                    Random r = new Random();
-                    for (int i = 0;i <= 18; i ++){
-                        p.launchProjectile(Arrow.class,e.getProjectile().getVelocity().multiply(0.5).rotateAroundX(r.nextDouble(-0.3,0.3)).rotateAroundY(r.nextDouble(-0.3,0.3)).rotateAroundZ(r.nextDouble(-0.3,0.3)));
-                    }
-                    break;
-            }
+        if (!(e.getEntity() instanceof Player)) return;
+        PlayerModel model = PlayerManager.getModelByPlayer((Player) e.getEntity());
+        if (model == null) return;
+        if (model.getKit().equals(KitType.STEAMPUNK)) {
+            KitManager.steampunkShoot(model, e);
         }
     }
 
     @EventHandler
     public void OnProjHit(ProjectileHitEvent e){
-        if (e.getEntity().getType().equals(EntityType.SNOWBALL) && e.getEntity().getMetadata("data").get(0).asString().equals("chaotic.snowball")){
-            e.setCancelled(true);
-            TNTPrimed tnt = (TNTPrimed) Bukkit.getWorld("world").spawnEntity(e.getEntity().getLocation(), EntityType.PRIMED_TNT);
-            tnt.setFuseTicks(0);
-            //tnt.setSource(p);
-            tnt.setYield(1.85f);
+        Projectile j = e.getEntity();
+        if (j instanceof Snowball){
+            if (j.getMetadata("type").get(0).asString().equals("chaotic.snowball")) {
+
+                TNTPrimed tnt = (TNTPrimed) Bukkit.getWorld("world").spawnEntity(j.getLocation(), EntityType.PRIMED_TNT);
+                tnt.setFuseTicks(0);
+                tnt.setSource(Bukkit.getPlayer(j.getMetadata("source").get(0).asString()));
+                tnt.setYield(1.5f);
+                j.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, j.getLocation(), 3);
+            } else if (j.getMetadata("type").get(0).asString().equals("chaotic.cluster")) {
+                Vector v = new Vector(0.1,0.145,0.1);
+                for (int i = 0; i < 5; i++){
+                    Snowball snowball = (Snowball) Bukkit.getWorld("world").spawnEntity(j.getLocation(), EntityType.SNOWBALL);
+                    snowball.setVelocity(v.rotateAroundY(Math.toRadians(72)).add(new Vector(0,0.02,0)));
+                    snowball.setInvulnerable(true);
+                    snowball.setMetadata("type", new FixedMetadataValue(plugin, "chaotic.snowball"));
+                    snowball.setMetadata("source", new FixedMetadataValue(plugin, j.getMetadata("source").get(0).asString()));
+                }
+            }
+        }else if(j instanceof Egg){
+            if (j.getMetadata("type").get(0).asString().equals("satanist.egg")) {
+
+            }
+            //TODO сделать зоной где будет выдаваться переделанный эффект иссушения наверное
+        }
+    }
+    @EventHandler
+    public void OnEntityDeath(EntityDeathEvent e){
+        LivingEntity entity = e.getEntity();
+        MobModel model = EntityManager.getModelByEntity(entity);
+        if (model != null) {
+            EntityManager.mobDeath(entity);
+            //TODO как различать мобов если некоторые должны делать что то при смерти?(список тегов для мобМодели)
         }
     }
 }
