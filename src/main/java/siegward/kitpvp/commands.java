@@ -11,11 +11,10 @@ import org.jetbrains.annotations.NotNull;
 
 
 public class commands implements CommandExecutor {
-    KitPvP plugin = KitPvP.getPlugin();
     @Override
     public boolean onCommand(@NotNull CommandSender Sender, @NotNull Command command, @NotNull String s, @NotNull String[] args) {
         if (command.getName().equalsIgnoreCase("KitPvP")){
-            if (args[0].equalsIgnoreCase("help") && Sender instanceof Player){
+            if (args[0].equalsIgnoreCase("help") && Sender instanceof Player && Sender.isOp()){
                 //plugin.getLogger().
                 Sender.sendMessage(Component.text("/pvp kit <kit> <Player>").color(NamedTextColor.YELLOW));
                 Sender.sendMessage(Component.text("/pvp use <ability> <Player>").color(NamedTextColor.YELLOW));
@@ -26,6 +25,10 @@ public class commands implements CommandExecutor {
                 assert p != null;
                 Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "cmi kit " + args[1] + " " + p.getName());
                 KitType kit;
+
+                if (PlayerManager.getModelByPlayer(p) != null){
+                    PlayerManager.removePlayer(p);
+                }
                 switch (args[1]) {
                     //воины
                     case "assassin":
@@ -68,6 +71,8 @@ public class commands implements CommandExecutor {
                     case "satanist":
                         kit = KitType.SATANIST;
                         PlayerManager.addPlayer(p,kit);
+                        p.setAllowFlight(true);
+                        p.setFlySpeed(0.03f);
                         break;
                     case "pyro":
                         kit = KitType.PYRO;
@@ -87,18 +92,23 @@ public class commands implements CommandExecutor {
                         kit = KitType.UNDEAD;
                         PlayerManager.addPlayer(p,kit);
                         break;
+                    //TODO сделать очистку кита
                 }
             }else if (args[0].equalsIgnoreCase("team") && args.length == 3){
                 Player p = Bukkit.getPlayer(args[2]);
                 switch (args[1]) {
                     case "red":
                         PlayerManager.setPlayerTeam(p,TeamType.RED);
+                        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team join RED " + p.getName());
                         break;
                     case "blue":
                         PlayerManager.setPlayerTeam(p,TeamType.BLUE);
+                        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team join BLUE " + p.getName());
                         break;
                     default:
                         PlayerManager.setPlayerTeam(p,null);
+                        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team leave " + p.getName());
+                        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team join " + p.getName() + "_p " + p.getName());
                         break;
                 }
             }else if (args[0].equalsIgnoreCase("use") && args.length == 3){
@@ -145,26 +155,26 @@ public class commands implements CommandExecutor {
                     case "satanist.egg":
                         KitManager.satanistEgg(m);
                         break;
-                    case "pyro.":
-                        //TODO обсудить огненного мага
+                    case "pyro.firethrower":
+                        KitManager.pyroFirethrower(m);
                         break;
-                    case "pyro..":
-
+                    case "pyro.fireball":
+                        KitManager.pyroFireball(m);
                         break;
-                    case "pyro...":
-
+                    case "pyro.napalm":
+                        KitManager.pyroNapalm(m);
                         break;
 
                     case "creeperman.summon":
                         KitManager.creepermanSummon(m);
                         break;
-                    case "creeperman.bombjump":
-                        KitManager.creepermanBombJump(m);
+                    case "creeperman.explosions":
+                        KitManager.creepermanExplosions(m);
                         break;
                     case "necromancer.summon":
                         KitManager.necromancerSummon(m);
                         break;
-                    case "necromander.pentagram":
+                    case "necromancer.pentagram":
                         KitManager.necromancerPentagram(m);
                         break;
                     case "undead.summon":
@@ -172,6 +182,9 @@ public class commands implements CommandExecutor {
                         break;
                     case "undead.disaster":
                         KitManager.undeadDisaster(m);
+                        break;
+                    case "heal":
+                        KitManager.heal(m);
                         break;
                 }
 

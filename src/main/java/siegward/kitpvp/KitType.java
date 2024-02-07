@@ -18,7 +18,7 @@ public enum KitType {
     ASSASSIN(10, 100,100),
     MERC(10, 100, 100),
     ROYAL(10, 100, 100),
-    STEAMPUNK(10, 100, 100),
+    STEAMPUNK(10, 0, 200),
     ROBIN(10, 100, 100),
     CHAOTIC(10, 2000, 2000),
     SATANIST(10, 2000, 2000),

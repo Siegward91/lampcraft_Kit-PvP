@@ -1,9 +1,14 @@
 package siegward.kitpvp;
 
+import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,14 +16,21 @@ import java.util.List;
 public class PlayerManager {
     private static final KitPvP plugin = KitPvP.getPlugin();
     private static final List<PlayerModel> playerList = new ArrayList<>();
+    private static final List<PlayerModel> playersToRemove = new ArrayList<>();
+
 
     public static void init(){
+        Particle.DustTransition rageParticle = new Particle.DustTransition(Color.fromRGB(250, 60, 60), Color.fromRGB(140, 20, 20), 1.5F);
+
         BukkitRunnable mainHandler = new BukkitRunnable() {
             @Override
             public void run() {
                 for (PlayerModel model : playerList){
                     switch (model.getKit()){
                         case KNIGHT:
+                            if (model.getResourceDifferencePerSecond() < 0){
+                                Bukkit.getWorld("world").spawnParticle(Particle.DUST_COLOR_TRANSITION, model.getPlayer().getLocation().add(0,0.6,0), 5,0.3,0.2,0.3, rageParticle);
+                            }
                             break;
 
                         case MERC:
@@ -50,8 +62,24 @@ public class PlayerManager {
                             break;
                     }
                     //стандартный реген ресурса
-                    if (model.getResourceCurrent() == 0) model.setResourceDifferencePerSecond(model.getKit().getDefaultResourceDifferencePerSecond());
-                    model.setResourceCurrent(Math.max(0, Math.min(model.getResourceMax(), model.getResourceCurrent() + model.getResourceDifferencePerSecond())));
+                    if (model.getResourceCurrent() == 0) {
+                        model.setResourceDifferencePerSecond(model.getKit().getDefaultResourceDifferencePerSecond());
+                        switch (model.getKit()){
+                            case SATANIST:
+                                model.getPlayer().setFlying(false);
+                                model.getPlayer().removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+                                break;
+                            case KNIGHT:
+                                model.getPlayer().removePotionEffect(PotionEffectType.SPEED);
+                                model.getPlayer().removePotionEffect(PotionEffectType.INCREASE_DAMAGE);
+                                model.getPlayer().removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+                                break;
+                        }
+                    }
+                    model.setResourceCurrent(Math.max(0, Math.min(model.getResourceMax(), model.getResourceCurrent() + model.getResourceDifferencePerSecond()/20)));
+                }
+                for (PlayerModel model : playersToRemove){
+                    playerList.remove(model);
                 }
             }
         };
@@ -64,9 +92,10 @@ public class PlayerManager {
     }
 
     public static void removePlayer(Player p){
-        playerList.remove(getModelByPlayer(p));
+        playersToRemove.add(getModelByPlayer(p));
         p.setMaxHealth(20.0);
         p.setWalkSpeed(0.2f);
+        p.setFlySpeed(0.1f);
         p.setLevel(0);
         p.setExp(0);
     }
@@ -101,6 +130,7 @@ class PlayerModel{
     private KitType kit;
     private TeamType team;
     private int combatMode;
+    private double costMultiplier;
 
     public PlayerModel(Player player, double resourceCurrent, double resourceDifferencePerSecond, int resourceMax, KitType kit) {
         this.player = player;
@@ -108,11 +138,18 @@ class PlayerModel{
         this.resourceDifferencePerSecond = resourceDifferencePerSecond;
         this.resourceMax = resourceMax;
         this.kit = kit;
-        this.team = null;
+        team = null;
+        costMultiplier = 1;
         combatMode = 0;
     }
 
+    public double getCostMultiplier() {
+        return costMultiplier;
+    }
 
+    public void setCostMultiplier(double costMultiplier) {
+        this.costMultiplier = costMultiplier;
+    }
 
     public int getCombatMode() {
         return combatMode;
@@ -147,7 +184,7 @@ class PlayerModel{
 
     public void setResourceCurrent(double resourceCurrent) {
         this.resourceCurrent = resourceCurrent;
-        player.setExp((float) resourceCurrent/resourceMax);
+        player.setExp((float) (this.resourceCurrent/resourceMax));
     }
 
     public int getResourceMax() {
