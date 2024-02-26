@@ -3,6 +3,7 @@ package siegward.kitpvp;
 import io.papermc.paper.event.block.BlockBreakBlockEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
@@ -41,11 +42,13 @@ public class listeners implements Listener {
     @EventHandler
     public void OnLeave(PlayerQuitEvent e){
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team remove " + e.getPlayer().getName() + "_p");
+
     }
 
     @EventHandler
     public void OnRespawn(PlayerRespawnEvent e){
         Player p = e.getPlayer();
+        PlayerManager.removePlayer(p);
         p.setHealth(p.getMaxHealth());
     }
 
@@ -88,14 +91,24 @@ public class listeners implements Listener {
         PlayerModel playerModel = PlayerManager.getModelByPlayer(p);
         if (playerModel == null) return;
         //if (playerModel.getCombatMode() > 0){
-        ItemStack soul = new ItemStack(Material.NETHER_STAR,1);
+        int count = 0;
+        for (ItemStack item : p.getInventory()){
+            if (item == null) continue;
+            if (item.getType().equals(Material.NETHER_STAR) && item.getItemMeta().displayName().equals(Component.text("Потерянная душа").decoration(TextDecoration.ITALIC, false).color(NamedTextColor.AQUA))){
+                count += item.getAmount();
+            }
+        }
+        ItemStack soul = new ItemStack(Material.NETHER_STAR,count+1);
         ItemMeta soulItemMeta = soul.getItemMeta();
-        soulItemMeta.displayName(Component.text("Потерянная душа").color(NamedTextColor.AQUA));
+        soulItemMeta.displayName(Component.text("Потерянная душа").decoration(TextDecoration.ITALIC, false).color(NamedTextColor.AQUA));
         soul.setItemMeta(soulItemMeta);
         p.getWorld().dropItem(p.getLocation(),soul);
         //}
         PlayerManager.removePlayer(p);
 
+        if (playerModel.getKit().equals(KitType.CREEPERMAN) || playerModel.getKit().equals(KitType.NECROMANCER) || playerModel.getKit().equals(KitType.UNDEAD)){
+            EntityManager.spawnVex(playerModel.getPlayer(), EntityType.VEX, Component.text("Дух " + playerModel.getPlayer().getName()), 20*30,4,10,10,1);
+        }
 
         if (p.getKiller() != null) {
             Player killer = p.getKiller();
@@ -133,7 +146,7 @@ public class listeners implements Listener {
                 TNTPrimed tnt = (TNTPrimed) Bukkit.getWorld("world").spawnEntity(j.getLocation(), EntityType.PRIMED_TNT);
                 tnt.setFuseTicks(1);
                 tnt.setSource(Bukkit.getPlayer(j.getMetadata("source").get(0).asString()));
-                tnt.setYield(1.5f);
+                tnt.setYield(2.5f);
                 j.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, j.getLocation(), 3);
             } else if (j.getMetadata("type").get(0).asString().equals("chaotic.cluster")) {
                 Vector v = new Vector(0.1,0.145,0.1);
@@ -210,14 +223,14 @@ public class listeners implements Listener {
             }
             //TODO менеджер еффектов и снарядов?
         }else if (j instanceof Arrow){
-            if (j.getShooter() instanceof Player && PlayerManager.getModelByPlayer((Player) j.getShooter()).getKit().equals(KitType.STEAMPUNK) && (j.getMetadata("type").get(0).asString().equalsIgnoreCase("steampunk.shotgun"))) {
+            if ((j.getShooter() instanceof Player && PlayerManager.getModelByPlayer((Player) j.getShooter()).getKit().equals(KitType.STEAMPUNK)) && (j.getMetadata("type").get(0).asString().equalsIgnoreCase("steampunk.shotgun"))) {
                 if (e.getHitEntity() != null) {
                     LivingEntity entity = (LivingEntity) e.getHitEntity();
                     //попытка сделать дробовик нормальным(имба обосраная)
 
                     e.setCancelled(true);
-
-                    double trueDamage = 4;
+                    plugin.getLogger().warning("cancelled");
+                    double trueDamage = 2;
                     plugin.getLogger().warning(String.valueOf(entity.getAttribute(Attribute.GENERIC_ARMOR).getValue()));
                     double damage = trueDamage * (1 - (Math.min(20, Math.max( entity.getAttribute(Attribute.GENERIC_ARMOR).getValue() / 5, entity.getAttribute(Attribute.GENERIC_ARMOR).getValue() - (4*trueDamage)/8)))/25);
                     entity.setHealth(Math.max(0, entity.getHealth() - damage));
@@ -246,7 +259,7 @@ public class listeners implements Listener {
                 }
             }
 
-        }else if (j instanceof Fireball){
+        }else if (j instanceof Fireball && !(j instanceof WitherSkull)){
             if (j.getMetadata("type").get(0).asString().equalsIgnoreCase("pyro.fireball")) {
                 Set<LivingEntity> list = new HashSet<>();
                 list.addAll(e.getEntity().getLocation().getNearbyLivingEntities( 3));
@@ -271,11 +284,6 @@ public class listeners implements Listener {
             MobModel model = EntityManager.getModelByEntity(entity);
             if (model != null) {
                 EntityManager.mobDeath(model);
-            }
-        }else {
-            PlayerModel model = PlayerManager.getModelByPlayer((Player) entity);
-            if (model != null && (model.getKit().equals(KitType.CREEPERMAN) || model.getKit().equals(KitType.NECROMANCER) || model.getKit().equals(KitType.UNDEAD))){
-                EntityManager.spawnVex(model.getPlayer(), EntityType.VEX, Component.text("Дух " + model.getPlayer().getName()), 20*30,4,10,10,1);
             }
         }
     }
@@ -305,9 +313,7 @@ public class listeners implements Listener {
     }
     @EventHandler
     public void onBlockExplode(EntityExplodeEvent e) {
-        TNTPrimed tnt = (TNTPrimed) e.getEntity();
-        if (PlayerManager.getModelByPlayer((Player) tnt.getSource()) != null){
-            e.blockList().clear();
-        }
+        e.blockList().clear();
+
     }
 }

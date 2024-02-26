@@ -23,12 +23,10 @@ public class commands implements CommandExecutor {
             }else if (args[0].equalsIgnoreCase("kit") && args.length == 3) {
                 Player p = Bukkit.getPlayer(args[2]);
                 assert p != null;
-                Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "cmi kit " + args[1] + " " + p.getName());
                 KitType kit;
+                p.setAllowFlight(false);
+                p.setFlying(false);
 
-                if (PlayerManager.getModelByPlayer(p) != null){
-                    PlayerManager.removePlayer(p);
-                }
                 switch (args[1]) {
                     //воины
                     case "assassin":
@@ -92,7 +90,11 @@ public class commands implements CommandExecutor {
                         kit = KitType.UNDEAD;
                         PlayerManager.addPlayer(p,kit);
                         break;
-                    //TODO сделать очистку кита
+
+                    //очистки
+                    case "clear":
+                        PlayerManager.removePlayer(p);
+                        break;
                 }
             }else if (args[0].equalsIgnoreCase("team") && args.length == 3){
                 Player p = Bukkit.getPlayer(args[2]);
@@ -183,8 +185,12 @@ public class commands implements CommandExecutor {
                     case "undead.disaster":
                         KitManager.undeadDisaster(m);
                         break;
+
                     case "heal":
                         KitManager.heal(m);
+                        break;
+                    case "soul":
+                        KitManager.soul(m);
                         break;
                 }
 

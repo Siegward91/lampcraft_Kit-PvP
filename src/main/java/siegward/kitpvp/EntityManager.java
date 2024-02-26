@@ -33,15 +33,18 @@ public class EntityManager {
                             EntityManager.mobDeath(mob);
                         }else {
                             //частицы старения
-                            l.setHealth(Math.max(0, l.getHealth() - (mob.getTicksLived() - mob.getTicksLiveMax()) * 0.1));
+                            l.setHealth(Math.max(0, l.getHealth() - (mob.getTicksLived() - mob.getTicksLiveMax()) * 0.02));
+                            l.getWorld().spawnParticle(Particle.ASH, mob.getEntity().getLocation().add(0,1,0), 5, 0.2, 0.4, 0.2, 0);
                         }
                     }
 
                     //частицы
                     if (mob.getEntity().getType().equals(EntityType.SILVERFISH)) {
-                        if (mob.getTicksLived() <= 60) {
+                        if (mob.getTicksLived() < 60) {
                             mob.getEntity().getWorld().spawnParticle(Particle.PORTAL, mob.getEntity().getLocation(), 2, 0, 0, 0, 1);
-                        } else if (mob.getTicksLived() == 100) {
+                        } else if (mob.getTicksLived() == 60) {
+                            mob.getEntity().getWorld().spawnParticle(Particle.PORTAL, mob.getEntity().getLocation(), 10, 0, 0, 0, 1);
+                        }else if (mob.getTicksLived() == 110) {
                             mob.getEntity().getWorld().spawnParticle(Particle.VILLAGER_HAPPY, mob.getEntity().getLocation(), 20, 0.2, 0.1, 0.2);
                         }
                     }
@@ -87,8 +90,8 @@ public class EntityManager {
         mob.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(movementSpeed);
         mob.getAttribute(Attribute.GENERIC_ARMOR).setBaseValue(armor);
         mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(attackDamage);
-        mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(attackSpeed);
-        mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(maxHealth);
+        //mob.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(attackSpeed);
+        mob.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(maxHealth);
         mob.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).setBaseValue(knockbackResistance);
         mob.getAttribute(Attribute.ZOMBIE_SPAWN_REINFORCEMENTS).setBaseValue(0);
 
@@ -98,7 +101,6 @@ public class EntityManager {
         mob.setCanPickupItems(false);
         mob.setShouldBurnInDay(false);
         mob.setAdult();
-        mob.setCollidable(false);
 
         mobList.add(new MobModel(mob, p, true,ticksLiveMax));
     }
@@ -115,7 +117,7 @@ public class EntityManager {
 
         mob.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(movementSpeed);
         mob.getAttribute(Attribute.GENERIC_ARMOR).setBaseValue(armor);
-        mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(maxHealth);
+        mob.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(maxHealth);
         mob.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).setBaseValue(knockbackResistance);
 
         mob.setHealth(maxHealth);
@@ -123,7 +125,6 @@ public class EntityManager {
         mob.setCustomNameVisible(true);
         mob.setCanPickupItems(false);
         mob.setShouldBurnInDay(false);
-        mob.setCollidable(false);
 
         ItemStack bow = new ItemStack(Material.BOW);
         ItemMeta bowMeta = bow.getItemMeta();
@@ -147,14 +148,13 @@ public class EntityManager {
 
         mob.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(movementSpeed);
         mob.getAttribute(Attribute.GENERIC_ARMOR).setBaseValue(armor);
-        mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(maxHealth);
+        mob.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(maxHealth);
         mob.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).setBaseValue(knockbackResistance);
 
         mob.setHealth(maxHealth);
         mob.customName(name);
         mob.setCustomNameVisible(true);
         mob.setCanPickupItems(false);
-        mob.setCollidable(false);
         mob.setExplosionRadius(explosion);
         mob.setMaxFuseTicks(fuse);
 
@@ -228,7 +228,7 @@ public class EntityManager {
     public static boolean isInSameTeam(Player p, LivingEntity e){
         PlayerModel playerModel = PlayerManager.getModelByPlayer(p);
         MobModel mobModel = getModelByEntity(e);
-        if (playerModel == null || mobModel == null) return false;
+        if (playerModel == null || mobModel == null || playerModel.getTeam() == null || PlayerManager.getModelByPlayer(mobModel.getSource()).getTeam() == null) return false;
         return playerModel.getTeam().equals(PlayerManager.getModelByPlayer(mobModel.getSource()).getTeam());
     }
 }

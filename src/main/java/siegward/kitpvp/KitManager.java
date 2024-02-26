@@ -2,15 +2,17 @@ package siegward.kitpvp;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
@@ -40,13 +42,9 @@ public class KitManager {
 
     public static void knightArmor(PlayerModel m){
         int cooldown = 20*12;
-        int cost = 20;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
-        if ((p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost) || (p.hasPotionEffect(PotionEffectType.INCREASE_DAMAGE))){
-            if (!p.hasPotionEffect(PotionEffectType.INCREASE_DAMAGE)) {
-                m.setResourceCurrent(m.getResourceCurrent() - cost);;
-            }
+        if (p.getCooldown(item) == 0){
             double Before = p.getAbsorptionAmount();
             p.setAbsorptionAmount(Before + 12.0);
             BukkitRunnable timer = new BukkitRunnable() {
@@ -73,6 +71,7 @@ public class KitManager {
         }
         if (m.getResourceCurrent() == m.getResourceMax()){
             m.setResourceDifferencePerSecond(-20);
+            p.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).setBaseValue(1);
             p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 999999, 1,false,false,true));
             p.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 999999, 0,false,false,true));
             p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 999999, 1,false,false,true));
@@ -131,28 +130,26 @@ public class KitManager {
 
     //стрелки
     public static void royalFirework(PlayerModel m){
-        int cost = 40;
+        int cost = 70;
         int cooldown = 10;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
 
-            Set<Entity> list = new HashSet<>();
+            Set<LivingEntity> list = new HashSet<>();
             //область
-            list.addAll(Objects.requireNonNull(p.getWorld()).getNearbyEntities(p.getEyeLocation().add(p.getEyeLocation().getDirection().multiply(2)), 2.0,2.0, 2.0));
+            list.addAll(p.getEyeLocation().add(p.getEyeLocation().getDirection().multiply(2)).getNearbyLivingEntities(2));
             list.remove(p);
-            for (Entity i: list){
-                if (!(i instanceof LivingEntity)) continue;
-                LivingEntity e = (LivingEntity) i;
-                if ((PlayerManager.getModelByPlayer((Player) e) != null && !PlayerManager.isInSameTeam(p,(Player) e)) || (EntityManager.getModelByEntity(e) != null && !EntityManager.isInSameTeam(p, e))){
+            for (LivingEntity entity: list){
+                if ((entity instanceof Player && (PlayerManager.getModelByPlayer((Player) entity)) != null && !PlayerManager.isInSameTeam(p,(Player) entity)) || (!(entity instanceof Player) && (EntityManager.getModelByEntity(entity) != null && !EntityManager.isInSameTeam(p, entity)))){
                     Vector v = p.getEyeLocation().getDirection();
                     double X1 = p.getEyeLocation().getDirection().getX();
                     double Z1 = p.getEyeLocation().getDirection().getZ();
                     double x2 = X1/Math.pow(X1*X1 + Z1*Z1, 0.5);
                     double z2 = Z1/Math.pow(X1*X1 + Z1*Z1, 0.5);
                     v.setY(0.2).setX(x2).setZ(z2);
-                    e.setVelocity(v.multiply(1.5));
+                    entity.setVelocity(v.multiply(1.5));
                 }
             }
             p.setVelocity(p.getEyeLocation().getDirection().multiply(-1));
@@ -185,7 +182,7 @@ public class KitManager {
         }
     }
     public static void steampunkRebuild(PlayerModel m){
-        int cooldown = 20;
+        int cooldown = 40;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0){
@@ -207,10 +204,10 @@ public class KitManager {
                 Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"clear " + p.getName() + " minecraft:crossbow 1");
                 switch (mode){
                     case 0:
-                        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"cmi kit inventor.shotgun " + p.getName());
+                        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"cmi kit steampunk.shotgun " + p.getName());
                         break;
                     case 1:
-                        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"cmi kit inventor.pp " + p.getName());
+                        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),"cmi kit steampunk.snipe " + p.getName());
                         break;
                 }
             }
@@ -219,6 +216,7 @@ public class KitManager {
     }
 
     public static void robinBolt(PlayerModel m){
+        //TODO не работает
         int cost = 75;
         int cooldown = 20;
         Player p = m.getPlayer();
@@ -231,7 +229,7 @@ public class KitManager {
             }
             m.setResourceCurrent(m.getResourceCurrent() - cost);
 
-            Set<Entity> list = new HashSet<>();
+            Set<LivingEntity> list = new HashSet<>();
             Vector v = p.getEyeLocation().getDirection().multiply(1.5);
             BukkitRunnable arrow = new BukkitRunnable() {
                 Location l = p.getEyeLocation();
@@ -240,23 +238,21 @@ public class KitManager {
                 public void run() {
                     if (time < 60) {
                         //частицы
-                        for (Player i : Bukkit.getOnlinePlayers()){
-                            i.spawnParticle(Particle.EXPLOSION_LARGE,l,1);
-                        }
+                        Bukkit.getWorld("world").spawnParticle(Particle.EXPLOSION_LARGE,l,1);
 
-                        list.addAll(Objects.requireNonNull(p.getWorld()).getNearbyEntities(l, 1.0, 1.0, 1.0));
+
+                        list.addAll(l.getNearbyLivingEntities(2));
                         list.remove(p);
-                        for (Entity i : list) {
-                            LivingEntity enemy = (LivingEntity) i;
+                        for (LivingEntity i : list) {
                             //надеюсь правильно
-                            if (enemy instanceof Player){
-                                Player enemyPlayer = (Player) enemy;
+                            if (i instanceof Player){
+                                Player enemyPlayer = (Player) i;
                                 if (!PlayerManager.isInSameTeam(p,enemyPlayer)) {
-                                    enemy.damage(10.0, p);
+                                    i.damage(10.0, p);
                                 }
                             }else {
-                                if (!EntityManager.isInSameTeam(p, enemy)){
-                                    enemy.damage(10.0, p);
+                                if (!EntityManager.isInSameTeam(p, i)){
+                                    i.damage(10.0, p);
                                 }
                             }
                         }
@@ -299,6 +295,7 @@ public class KitManager {
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
             Projectile j = p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection());
+            j.setInvulnerable(true);
             j.setMetadata("type", new FixedMetadataValue(plugin, "chaotic.snowball"));
             j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
         }
@@ -311,6 +308,7 @@ public class KitManager {
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
             Projectile j = p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection());
+            j.setInvulnerable(true);
             j.setMetadata("type", new FixedMetadataValue(plugin, "chaotic.cluster"));
             j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
             p.setCooldown(item,cooldown);
@@ -357,7 +355,7 @@ public class KitManager {
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
-            Projectile j = p.launchProjectile(Egg.class, p.getEyeLocation().getDirection().multiply(0.5));
+            Projectile j = p.launchProjectile(Egg.class, p.getEyeLocation().getDirection().multiply(0.6));
             j.setMetadata("type", new FixedMetadataValue(plugin, "satanist.egg"));
             j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
             p.setCooldown(item,cooldown);
@@ -377,7 +375,7 @@ public class KitManager {
                 @Override
                 public void run() {
                     if (timer >= 2) this.cancel();
-                    Projectile j = p.launchProjectile(SmallFireball.class, p.getEyeLocation().getDirection().multiply(1.5).rotateAroundX(r.nextDouble(-0.2, 0.2)).rotateAroundY(r.nextDouble(-0.1, 0.1)).rotateAroundZ(r.nextDouble(-0.2, 0.2)));
+                    Projectile j = p.launchProjectile(SmallFireball.class, p.getEyeLocation().add(0,-0.2,0).getDirection().multiply(1.5).rotateAroundX(r.nextDouble(-0.2, 0.2)).rotateAroundY(r.nextDouble(-0.1, 0.1)).rotateAroundZ(r.nextDouble(-0.2, 0.2)));
                     j.setShooter(p);
                     j.setMetadata("type", new FixedMetadataValue(plugin, "pyro.firethrower"));
                     j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
@@ -417,7 +415,7 @@ public class KitManager {
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
-            Projectile j = p.launchProjectile(Egg.class, p.getEyeLocation().getDirection().multiply(0.5));
+            Projectile j = p.launchProjectile(Egg.class, p.getEyeLocation().getDirection().multiply(0.9));
             j.setMetadata("type", new FixedMetadataValue(plugin, "pyro.napalm"));
             j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
             p.setCooldown(item,cooldown);
@@ -673,7 +671,33 @@ public class KitManager {
         int cooldown = 400;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
-        p.setHealth(p.getMaxHealth());
-        p.setCooldown(item,cooldown);
+        if (p.getCooldown(item) == 0 && p.getHealth() < p.getMaxHealth()) {
+            p.setHealth(p.getMaxHealth());
+            p.setCooldown(item, cooldown);
+        }
+    }
+
+    public static void soul(PlayerModel m){
+        int index = 0;
+        int count = 0;
+        Player p = m.getPlayer();
+        if (!p.getInventory().contains(Material.NETHER_STAR)) {
+            p.sendActionBar(Component.text("У вас нет потерянных душ!").color(NamedTextColor.RED));
+            return;
+        }
+        for (ItemStack item : p.getInventory()){
+            if (item == null) {
+                index++;
+                continue;
+            }
+            if (item.getType().equals(Material.NETHER_STAR) && item.getItemMeta().displayName().equals(Component.text("Потерянная душа").decoration(TextDecoration.ITALIC, false).color(NamedTextColor.AQUA))){
+                p.getInventory().clear(index);
+                count+= item.getAmount();
+            }
+            index++;
+        }
+        plugin.getLogger().warning(String.valueOf(count));
+        //TODO сюда привязку статистики
+        // count - количество душ в инвентаре
     }
 }

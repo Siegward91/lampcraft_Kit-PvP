@@ -5,6 +5,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.Particle;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -73,6 +75,7 @@ public class PlayerManager {
                                 model.getPlayer().removePotionEffect(PotionEffectType.SPEED);
                                 model.getPlayer().removePotionEffect(PotionEffectType.INCREASE_DAMAGE);
                                 model.getPlayer().removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+                                model.getPlayer().getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).setBaseValue(0);
                                 break;
                         }
                     }
@@ -87,17 +90,24 @@ public class PlayerManager {
     }
 
     public static void addPlayer(Player p, KitType kit){
+        if (getModelByPlayer(p) != null) removePlayer(p);
         playerList.add(new PlayerModel(p, kit.getDefaultStartingResource(), kit.getDefaultResourceDifferencePerSecond(), kit.getDefaultMaxResource(), kit));
 
     }
 
     public static void removePlayer(Player p){
-        playersToRemove.add(getModelByPlayer(p));
-        p.setMaxHealth(20.0);
+        if (getModelByPlayer(p) != null) {
+            playersToRemove.add(getModelByPlayer(p));
+        }
+        p.getInventory().clear();
+        p.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).setBaseValue(0);
+        p.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20);
         p.setWalkSpeed(0.2f);
         p.setFlySpeed(0.1f);
         p.setLevel(0);
         p.setExp(0);
+        p.setFlying(false);
+        p.setAllowFlight(false);
     }
 
     public static PlayerModel getModelByPlayer(Player p){
