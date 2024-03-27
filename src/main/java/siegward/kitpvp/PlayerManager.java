@@ -64,7 +64,7 @@ public class PlayerManager {
                             break;
                     }
                     //стандартный реген ресурса
-                    if (model.getResourceCurrent() == 0) {
+                    if (model.getResourceCurrent() == 0 && model.getResourceDifferencePerSecond() < 0) {
                         model.setResourceDifferencePerSecond(model.getKit().getDefaultResourceDifferencePerSecond());
                         switch (model.getKit()){
                             case SATANIST:
@@ -100,6 +100,7 @@ public class PlayerManager {
             playersToRemove.add(getModelByPlayer(p));
         }
         p.getInventory().clear();
+        p.removePotionEffect(PotionEffectType.JUMP);
         p.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).setBaseValue(0);
         p.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20);
         p.setWalkSpeed(0.2f);

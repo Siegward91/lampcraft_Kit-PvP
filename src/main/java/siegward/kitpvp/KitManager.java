@@ -2,12 +2,14 @@ package siegward.kitpvp;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -93,7 +95,7 @@ public class KitManager {
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
-            p.launchProjectile(EnderPearl.class, p.getEyeLocation().getDirection().multiply(3));
+            p.launchProjectile(EnderPearl.class, p.getEyeLocation().getDirection().multiply(1.5));
             p.setCooldown(item,cooldown);
 
         }
@@ -130,19 +132,19 @@ public class KitManager {
 
     //стрелки
     public static void royalFirework(PlayerModel m){
-        int cost = 70;
+        int cost = 60;
         int cooldown = 10;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
 
-            Set<LivingEntity> list = new HashSet<>();
+            Set<Entity> list = new HashSet<>();
             //область
-            list.addAll(p.getEyeLocation().add(p.getEyeLocation().getDirection().multiply(2)).getNearbyLivingEntities(2));
+            list.addAll(p.getEyeLocation().add(p.getEyeLocation().getDirection().multiply(2)).getNearbyEntities (2,2,2));
             list.remove(p);
-            for (LivingEntity entity: list){
-                if ((entity instanceof Player && (PlayerManager.getModelByPlayer((Player) entity)) != null && !PlayerManager.isInSameTeam(p,(Player) entity)) || (!(entity instanceof Player) && (EntityManager.getModelByEntity(entity) != null && !EntityManager.isInSameTeam(p, entity)))){
+            for (Entity entity: list){
+                if ((entity instanceof Player && !(PlayerManager.isInSameTeam(p,(Player) entity))) || ((entity instanceof LivingEntity) && !(EntityManager.isInSameTeam(p,(LivingEntity) entity))) || !(entity instanceof ArmorStand)){
                     Vector v = p.getEyeLocation().getDirection();
                     double X1 = p.getEyeLocation().getDirection().getX();
                     double Z1 = p.getEyeLocation().getDirection().getZ();
@@ -166,17 +168,16 @@ public class KitManager {
             case 0:
                 e.getProjectile().setVelocity(e.getProjectile().getVelocity().multiply(2));
                 e.getProjectile().setMetadata("type", new FixedMetadataValue(plugin, "steampunk.snipe"));
-                e.getProjectile().setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
                 break;
             case 1:
                 e.setCancelled(true);
                 Random r = new Random();
                 for (int i = 0;i <= 18; i ++){
-                    Projectile j = p.launchProjectile(Arrow.class,e.getProjectile().getVelocity().multiply(0.5).rotateAroundX(r.nextDouble(-0.3,0.3)).rotateAroundY(r.nextDouble(-0.3,0.3)).rotateAroundZ(r.nextDouble(-0.3,0.3)));
+                    Projectile j = p.launchProjectile(Arrow.class,e.getProjectile().getVelocity().multiply(0.3).rotateAroundX(r.nextDouble(-0.3,0.3)).rotateAroundY(r.nextDouble(-0.3,0.3)).rotateAroundZ(r.nextDouble(-0.3,0.3)));
                     //супермега идея, даже 2 варианта (не вызывать .damage или в момент попадания ставить .setMaximumNoDamageTicks на 0 а потом возвращать)
                     j.setShooter(p);
                     j.setMetadata("type", new FixedMetadataValue(plugin, "steampunk.shotgun"));
-                    j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
+                    j.setShooter(p);
                 }
                 break;
         }
@@ -216,7 +217,6 @@ public class KitManager {
     }
 
     public static void robinBolt(PlayerModel m){
-        //TODO не работает
         int cost = 75;
         int cooldown = 20;
         Player p = m.getPlayer();
@@ -236,23 +236,24 @@ public class KitManager {
                 int time = 0;
                 @Override
                 public void run() {
-                    if (time < 60) {
+                    if (time < 120) {
                         //частицы
                         Bukkit.getWorld("world").spawnParticle(Particle.EXPLOSION_LARGE,l,1);
 
 
-                        list.addAll(l.getNearbyLivingEntities(2));
+                        list.addAll(l.getNearbyLivingEntities(1.5));
                         list.remove(p);
                         for (LivingEntity i : list) {
                             //надеюсь правильно
-                            if (i instanceof Player){
-                                Player enemyPlayer = (Player) i;
-                                if (!PlayerManager.isInSameTeam(p,enemyPlayer)) {
-                                    i.damage(10.0, p);
-                                }
+                            if (i instanceof Player || i.getType().equals(EntityType.PLAYER)){
+                                //в OnDamage уже проверка стоит
+
+                                i.damage(10.0);
+                                i.setLastDamageCause(new EntityDamageEvent(p, EntityDamageEvent.DamageCause.PROJECTILE, 10));
                             }else {
-                                if (!EntityManager.isInSameTeam(p, i)){
-                                    i.damage(10.0, p);
+                                if (!(EntityManager.isInSameTeam(p, i))){
+                                    //с мобами работает (странный cmi)
+                                    i.damage(8.0, p);
                                 }
                             }
                         }
@@ -270,15 +271,17 @@ public class KitManager {
     }
     //маги
     public static void magesTakesManaAfterKill(PlayerModel m) {
-        double missingResource = m.getResourceMax() - m.getResourceCurrent();
+        m.setResourceDifferencePerSecond(m.getResourceDifferencePerSecond()*20);
+        m.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 3, 1,false,false,true));
+        m.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 3, 1,false,false,true));
         BukkitRunnable PassiveManaRegeneration = new BukkitRunnable() {
             int timer = 0;
 
             @Override
             public void run() {
-                if (timer < 40) {
-                    m.setResourceCurrent(Math.min(m.getResourceMax(), m.getResourceCurrent() + missingResource*0.20/40));
-                } else {
+
+                if (timer >= 40) {
+                    m.setResourceDifferencePerSecond(m.getKit().getDefaultResourceDifferencePerSecond());
                     this.cancel();
                 }
                 timer++;
@@ -289,34 +292,34 @@ public class KitManager {
     }
 
     public static void chaoticSnowball(PlayerModel m){
-        int cost = 80;
+        int cost = 70;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
-            Projectile j = p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection());
+            Projectile j = p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection().multiply(0.8));
             j.setInvulnerable(true);
             j.setMetadata("type", new FixedMetadataValue(plugin, "chaotic.snowball"));
-            j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
+            j.setShooter(p);
         }
     }
     public static void chaoticCluster(PlayerModel m){
         int cooldown = 20;
-        int cost = 150;
+        int cost = 100;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
-            Projectile j = p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection());
+            Projectile j = p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection().multiply(0.5));
             j.setInvulnerable(true);
             j.setMetadata("type", new FixedMetadataValue(plugin, "chaotic.cluster"));
-            j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
+            j.setShooter(p);
             p.setCooldown(item,cooldown);
         }
     }
     public static void chaoticC4(PlayerModel m){
         int cooldown = 20;
-        int cost = 100;
+        int cost = 50;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
@@ -327,44 +330,66 @@ public class KitManager {
     }
     public static void chaoticExplodeC4(PlayerModel m){
         int cooldown = 20*5;
-        int cost = 50;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
-        if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
+        if (p.getCooldown(item) == 0){
             if (EntityManager.explodeC4(p) > 0) {
-                m.setResourceCurrent(m.getResourceCurrent() - cost);
                 p.setCooldown(item, cooldown);
             }
         }
     }
 
     public static void satanistSkull(PlayerModel m){
-        int cost = 60;
+        int cost = 35;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
-            Projectile j = p.launchProjectile(WitherSkull.class, p.getEyeLocation().getDirection().multiply(2));
+            Projectile j = p.launchProjectile(WitherSkull.class, p.getEyeLocation().getDirection().multiply(2.5));
             j.setShooter(p);
         }
     }
     public static void satanistEgg(PlayerModel m){
         int cooldown = 10;
-        int cost = 90;
+        int cost = 60;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
             Projectile j = p.launchProjectile(Egg.class, p.getEyeLocation().getDirection().multiply(0.6));
             j.setMetadata("type", new FixedMetadataValue(plugin, "satanist.egg"));
-            j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
+            j.setShooter(p);
             p.setCooldown(item,cooldown);
 
         }
     }
-
-    public static void pyroFirethrower(PlayerModel m){
+    public static void satanistJump(PlayerModel m){
+        int cooldown = 20*15;
         int cost = 20;
+        Player p = m.getPlayer();
+        Material item = p.getInventory().getItemInMainHand().getType();
+        if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
+            m.setResourceCurrent(m.getResourceCurrent() - cost);
+            p.setVelocity(new Vector(0,2,0));
+            p.setCooldown(item,cooldown);
+        }
+    }
+
+    public static void pyroFireball(PlayerModel m){
+        int cooldown = 10;
+        int cost = 50;
+        Player p = m.getPlayer();
+        Material item = p.getInventory().getItemInMainHand().getType();
+        if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost) {
+            m.setResourceCurrent(m.getResourceCurrent() - cost);
+            Projectile j = p.launchProjectile(Fireball.class, p.getEyeLocation().getDirection().multiply(0.8));
+            j.setMetadata("type", new FixedMetadataValue(plugin, "pyro.fireball"));
+            j.setShooter(p);
+            p.setCooldown(item,cooldown);
+        }
+    }
+    public static void pyroFirethrower(PlayerModel m){
+        int cost = 10;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost) {
@@ -375,10 +400,9 @@ public class KitManager {
                 @Override
                 public void run() {
                     if (timer >= 2) this.cancel();
-                    Projectile j = p.launchProjectile(SmallFireball.class, p.getEyeLocation().add(0,-0.2,0).getDirection().multiply(1.5).rotateAroundX(r.nextDouble(-0.2, 0.2)).rotateAroundY(r.nextDouble(-0.1, 0.1)).rotateAroundZ(r.nextDouble(-0.2, 0.2)));
-                    j.setShooter(p);
+                    Projectile j = p.launchProjectile(SmallFireball.class, p.getEyeLocation().add(0,-1,0).getDirection().multiply(1.5).rotateAroundX(r.nextDouble(-0.2, 0.2)).rotateAroundY(r.nextDouble(-0.1, 0.1)).rotateAroundZ(r.nextDouble(-0.2, 0.2)));
                     j.setMetadata("type", new FixedMetadataValue(plugin, "pyro.firethrower"));
-                    j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
+                    j.setShooter(p);
 
                     BukkitRunnable fireRange = new BukkitRunnable() {
                         @Override
@@ -386,7 +410,7 @@ public class KitManager {
                             j.remove();
                         }
                     };
-                    fireRange.runTaskTimer(plugin,5,1);
+                    fireRange.runTaskLater(plugin,5);
 
                     timer++;
 
@@ -395,29 +419,16 @@ public class KitManager {
             fireThrower.runTaskTimer(plugin,0,2);
         }
     }
-    public static void pyroFireball(PlayerModel m){
-        int cooldown = 10;
-        int cost = 160;
-        Player p = m.getPlayer();
-        Material item = p.getInventory().getItemInMainHand().getType();
-        if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost) {
-            m.setResourceCurrent(m.getResourceCurrent() - cost);
-            Projectile j = p.launchProjectile(Fireball.class, p.getEyeLocation().getDirection().multiply(0.8));
-            j.setMetadata("type", new FixedMetadataValue(plugin, "pyro.fireball"));
-            j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
-            p.setCooldown(item,cooldown);
-        }
-    }
     public static void pyroNapalm(PlayerModel m){
-        int cooldown = 140;
-        int cost = 200;
+        int cooldown = 20*18;
+        int cost = 50;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
             Projectile j = p.launchProjectile(Egg.class, p.getEyeLocation().getDirection().multiply(0.9));
             j.setMetadata("type", new FixedMetadataValue(plugin, "pyro.napalm"));
-            j.setMetadata("source", new FixedMetadataValue(plugin, p.getName()));
+            j.setShooter(p);
             p.setCooldown(item,cooldown);
 
         }
@@ -425,13 +436,13 @@ public class KitManager {
 
     //призыватели
     public static void creepermanSummon(PlayerModel m){
-        int defaultCost = 120;
+        int defaultCost = 65;
         Player p = m.getPlayer();
         int currentCost = (int) (defaultCost*m.getCostMultiplier());
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= currentCost) {
             m.setResourceCurrent(m.getResourceCurrent() - currentCost);
-            EntityManager.spawnCreeper(p, EntityType.CREEPER, Component.text("Огурец " + p.getName()),20*30, 0.6, 2, 2, 10,20, 1.0);
+            EntityManager.spawnCreeper(p, EntityType.CREEPER, Component.text("Огурец " + p.getName()),20*30, 0.6, 2, 3, 10,20, 1.0);
             m.setCostMultiplier(m.getCostMultiplier() + 1);
             p.setLevel((int) (defaultCost*m.getCostMultiplier()));
             BukkitRunnable increasingCost = new BukkitRunnable() {
@@ -442,8 +453,8 @@ public class KitManager {
                     if (startingCost != p.getLevel()){
                         this.cancel();
                     }else if(timer >= 100){
-                        p.setLevel(0);
                         m.setCostMultiplier(1);
+                        p.setLevel((int) (defaultCost*m.getCostMultiplier()));
                         this.cancel();
                     }
                     timer++;
@@ -453,14 +464,14 @@ public class KitManager {
         }
     }
     public static void creepermanExplosions(PlayerModel m){
-        int cooldown = 480;
-        int cost = 200;
+        int cooldown = 20*18;
+        int cost = 50;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
             Particle.DustTransition smoke = new Particle.DustTransition(Color.fromRGB(50, 50, 50), Color.fromRGB(200, 200, 200), 1.0F);
-            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 140, 0, false, false, true));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 140, 1, false, false, true));
             p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 140, 2, false, false, true));
             m.setCostMultiplier(100);
             BukkitRunnable effect = new BukkitRunnable() {
@@ -469,14 +480,13 @@ public class KitManager {
                 public void run() {
                     if (p.isDead()) this.cancel();
                     Bukkit.getWorld("world").spawnParticle(Particle.DUST_COLOR_TRANSITION, p.getLocation().add(0,1,0), 3,0.2,0.3,0.2, smoke);
-                    if (timer == 80 || timer == 100 || timer == 120 || timer == 140){
+                    if (timer == 60 || timer == 80 || timer == 100 || timer == 120){
                         TNTPrimed tnt = (TNTPrimed) Bukkit.getWorld("world").spawnEntity(p.getLocation().add(0,1,0), EntityType.PRIMED_TNT);
                         tnt.setFuseTicks(0);
                         tnt.setSource(p);
-                        tnt.setYield(1.5f);
-                        Random r = new Random();
-                        p.setVelocity(new Vector(0.8,0.1,0).rotateAroundY(Math.toRadians(r.nextInt(360))));
-                    }else if (timer > 150){
+                        tnt.setYield(2.5f);
+                        p.setVelocity(p.getEyeLocation().getDirection().add(new Vector(0,0.2,0)).multiply(0.5));
+                    }else if (timer > 130){
                         m.setCostMultiplier(1);
                         this.cancel();
                     }
@@ -491,13 +501,13 @@ public class KitManager {
     }
 
     public static void necromancerSummon(PlayerModel m){
-        int defaultCost = 150;
+        int defaultCost = 35;
         Player p = m.getPlayer();
         int currentCost = (int) (defaultCost*m.getCostMultiplier());
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= currentCost) {
             m.setResourceCurrent(m.getResourceCurrent() - currentCost);
-            EntityManager.spawnSkeleton(p, EntityType.STRAY, Component.text("Стрелок " + p.getName()),20*60, 0.0, 2, 5, 20, 1.0);
+            EntityManager.spawnSkeleton(p, EntityType.STRAY, Component.text("Стрелок " + p.getName()),20*40, 0.0, 2, 5, 20, 1.0);
             m.setCostMultiplier(m.getCostMultiplier() + 1);
             p.setLevel((int) (defaultCost*m.getCostMultiplier()));
             BukkitRunnable increasingCost = new BukkitRunnable() {
@@ -507,9 +517,9 @@ public class KitManager {
                 public void run() {
                     if (startingCost != p.getLevel()){
                         this.cancel();
-                    }else if(timer >= 300){
-                        p.setLevel(0);
+                    }else if(timer >= 200){
                         m.setCostMultiplier(1);
+                        p.setLevel((int) (defaultCost*m.getCostMultiplier()));
                         this.cancel();
                     }
                     timer++;
@@ -520,7 +530,7 @@ public class KitManager {
     }
     public static void necromancerPentagram(PlayerModel m){
         int cooldown = 20*30;
-        int cost = 120;
+        int cost = 80;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost) {
@@ -541,19 +551,19 @@ public class KitManager {
                 @Override
                 public void run() {
                     Set<LivingEntity> list = new HashSet<>();
-                    if (timer < 60){
+                    if (timer < 40){
                         //частицы
-                        for (int i = 0; i < (timer+1)*6; i+=3) {
+                        for (int i = 0; i < (timer+1)*9; i+=3) {
                             Vector vec = v.clone().multiply(7).rotateAroundY(Math.toRadians(i));
                             Bukkit.getWorld("world").spawnParticle(Particle.DUST_COLOR_TRANSITION, location.clone().add(vec), 1,delayParticle);
 
                         }
-                        for (int i = 0; i < (timer+1)*6; i+=4) {
+                        for (int i = 0; i < (timer+1)*9; i+=4) {
                             Vector vec = v.clone().multiply(4).rotateAroundY(Math.toRadians(-i));
                             Bukkit.getWorld("world").spawnParticle(Particle.DUST_COLOR_TRANSITION, location.clone().add(vec), 1,delayParticle);
 
                         }
-                    }else if (timer < 300){
+                    }else if (timer < 280){
                         //частицы
                         for (int i = 0; i < 360; i+=3) {
                             Vector vec = v.clone().multiply(7).rotateAroundY(Math.toRadians(i));
@@ -590,13 +600,13 @@ public class KitManager {
     }
 
     public static void undeadSummon(PlayerModel m){
-        int defaultCost = 100;
+        int defaultCost = 20;
         Player p = m.getPlayer();
         int currentCost = (int) (defaultCost*m.getCostMultiplier());
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= currentCost) {
             m.setResourceCurrent(m.getResourceCurrent() - currentCost);
-            EntityManager.spawnZombie(p, EntityType.HUSK, Component.text("Зомби " + p.getName()),20*60, 0.3, 8, 2, 10.0,20, 0.2);
+            EntityManager.spawnZombie(p, EntityType.HUSK, Component.text("Зомби " + p.getName()),20*30, 0.3, 8, 2, 10.0,20, 0.2);
             m.setCostMultiplier(m.getCostMultiplier() + 1);
             p.setLevel((int) (defaultCost*m.getCostMultiplier()));
             BukkitRunnable increasingCost = new BukkitRunnable() {
@@ -606,9 +616,9 @@ public class KitManager {
                 public void run() {
                     if (startingCost != p.getLevel()){
                         this.cancel();
-                    }else if(timer >= 200){
-                        p.setLevel(0);
+                    }else if(timer >= 160){
                         m.setCostMultiplier(1);
+                        p.setLevel((int) (defaultCost*m.getCostMultiplier()));
                         this.cancel();
                     }
                     timer++;
@@ -619,7 +629,7 @@ public class KitManager {
     }
     public static void undeadDisaster(PlayerModel m){
         int cooldown = 20*20;
-        int cost = 150;
+        int cost = 40;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost) {
@@ -681,6 +691,10 @@ public class KitManager {
         int index = 0;
         int count = 0;
         Player p = m.getPlayer();
+        if (m.getKit().equals(KitType.NONE)){
+            p.sendActionBar(Component.text("Без класса нельзя сдать души)))").color(NamedTextColor.DARK_RED));
+            return;
+        }
         if (!p.getInventory().contains(Material.NETHER_STAR)) {
             p.sendActionBar(Component.text("У вас нет потерянных душ!").color(NamedTextColor.RED));
             return;
@@ -696,7 +710,7 @@ public class KitManager {
             }
             index++;
         }
-        plugin.getLogger().warning(String.valueOf(count));
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "cmi money give " + p.getName() + " " + count);
         //TODO сюда привязку статистики
         // count - количество душ в инвентаре
     }

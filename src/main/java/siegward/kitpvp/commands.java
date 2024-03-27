@@ -7,6 +7,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
 
 
@@ -51,14 +53,17 @@ public class commands implements CommandExecutor {
                     case "robin":
                         kit = KitType.ROBIN;
                         PlayerManager.addPlayer(p,kit);
+                        p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 999999, 1, false, false, true));
                         break;
                     case "steampunk":
                         kit = KitType.STEAMPUNK;
                         PlayerManager.addPlayer(p,kit);
+                        p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 999999, 1, false, false, true));
                         break;
                     case "royal":
                         kit = KitType.ROYAL;
                         PlayerManager.addPlayer(p,kit);
+                        p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 999999, 1, false, false, true));
                         break;
 
                     //маги
@@ -92,8 +97,9 @@ public class commands implements CommandExecutor {
                         break;
 
                     //очистки
-                    case "clear":
-                        PlayerManager.removePlayer(p);
+                    case "none":
+                        kit = KitType.NONE;
+                        PlayerManager.addPlayer(p,kit);
                         break;
                 }
             }else if (args[0].equalsIgnoreCase("team") && args.length == 3){
@@ -156,6 +162,9 @@ public class commands implements CommandExecutor {
                         break;
                     case "satanist.egg":
                         KitManager.satanistEgg(m);
+                        break;
+                    case "satanist.jump":
+                        KitManager.satanistJump(m);
                         break;
                     case "pyro.firethrower":
                         KitManager.pyroFirethrower(m);

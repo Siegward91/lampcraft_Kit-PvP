@@ -1,17 +1,13 @@
 package siegward.kitpvp;
 
-import io.papermc.paper.event.block.BlockBreakBlockEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
-import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -37,10 +33,12 @@ public class listeners implements Listener {
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team modify " + e.getPlayer().getName() + "_p friendlyFire false");
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team modify " + e.getPlayer().getName() + "_p collisionRule never");
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team join " + e.getPlayer().getName() + "_p " + e.getPlayer().getName());
+        PlayerManager.addPlayer(e.getPlayer(),KitType.NONE);
     }
 
     @EventHandler
     public void OnLeave(PlayerQuitEvent e){
+        PlayerManager.removePlayer(e.getPlayer());
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team remove " + e.getPlayer().getName() + "_p");
 
     }
@@ -50,6 +48,7 @@ public class listeners implements Listener {
         Player p = e.getPlayer();
         PlayerManager.removePlayer(p);
         p.setHealth(p.getMaxHealth());
+        PlayerManager.addPlayer(e.getPlayer(),KitType.NONE);
     }
 
     @EventHandler
@@ -82,6 +81,8 @@ public class listeners implements Listener {
             if (targetModel.getKit().equals(KitType.KNIGHT)) {
                 KitManager.knightTakingDamage(targetModel, e);
             }
+        }else if(e.getEntity() instanceof Fireball){
+            e.setCancelled(true);
         }
     }
 
@@ -145,8 +146,8 @@ public class listeners implements Listener {
 
                 TNTPrimed tnt = (TNTPrimed) Bukkit.getWorld("world").spawnEntity(j.getLocation(), EntityType.PRIMED_TNT);
                 tnt.setFuseTicks(1);
-                tnt.setSource(Bukkit.getPlayer(j.getMetadata("source").get(0).asString()));
-                tnt.setYield(2.5f);
+                tnt.setYield(2.2f);
+                tnt.setSource((Entity) j.getShooter());
                 j.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, j.getLocation(), 3);
             } else if (j.getMetadata("type").get(0).asString().equals("chaotic.cluster")) {
                 Vector v = new Vector(0.1,0.145,0.1);
@@ -155,7 +156,7 @@ public class listeners implements Listener {
                     snowball.setVelocity(v.rotateAroundY(Math.toRadians(72)).add(new Vector(0,0.02,0)));
                     snowball.setInvulnerable(true);
                     snowball.setMetadata("type", new FixedMetadataValue(plugin, "chaotic.snowball"));
-                    snowball.setMetadata("source", new FixedMetadataValue(plugin, j.getMetadata("source").get(0).asString()));
+                    snowball.setShooter(j.getShooter());
                 }
             }
         }else if(j instanceof Egg){
@@ -170,7 +171,7 @@ public class listeners implements Listener {
                         Set<LivingEntity> list = new HashSet<>();
                         list.addAll(location.getNearbyLivingEntities(2,1));
                         Bukkit.getWorld("world").spawnParticle(Particle.SQUID_INK,location,20,1,0.2, 1,0);
-                        Player p = Bukkit.getPlayer(j.getMetadata("source").get(0).asString());
+                        Player p = (Player) j.getShooter();
                         for (LivingEntity l : list) {
                             if (!l.isDead()) {
                                 l.setHealth(Math.max(0, l.getHealth() - ((double) 6 / 20)));
@@ -189,11 +190,11 @@ public class listeners implements Listener {
                     int timer = 0;
                     @Override
                     public void run() {
-                        if (timer >= 120) this.cancel();
+                        if (timer >= 140) this.cancel();
                         Set<LivingEntity> list = new HashSet<>();
                         list.addAll(location.getNearbyLivingEntities(4,1));
                         Bukkit.getWorld("world").spawnParticle(Particle.FLAME,location,50,2.5,0.3, 2.5,0.1);
-                        Player p = Bukkit.getPlayer(j.getMetadata("source").get(0).asString());
+                        Player p = (Player) j.getShooter();
                         for (LivingEntity l : list) {
                             if (l.equals(p)){
                                 l.setHealth(Math.min(l.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue(), l.getHealth() + (double) 2/20));
@@ -229,12 +230,10 @@ public class listeners implements Listener {
                     //попытка сделать дробовик нормальным(имба обосраная)
 
                     e.setCancelled(true);
-                    plugin.getLogger().warning("cancelled");
                     double trueDamage = 2;
-                    plugin.getLogger().warning(String.valueOf(entity.getAttribute(Attribute.GENERIC_ARMOR).getValue()));
                     double damage = trueDamage * (1 - (Math.min(20, Math.max( entity.getAttribute(Attribute.GENERIC_ARMOR).getValue() / 5, entity.getAttribute(Attribute.GENERIC_ARMOR).getValue() - (4*trueDamage)/8)))/25);
                     entity.setHealth(Math.max(0, entity.getHealth() - damage));
-                    entity.setLastDamageCause(new EntityDamageEvent(Objects.requireNonNull(Bukkit.getPlayer(j.getMetadata("source").get(0).asString())), EntityDamageEvent.DamageCause.PROJECTILE, 4));
+                    entity.setLastDamageCause(new EntityDamageEvent((Player) j.getShooter(), EntityDamageEvent.DamageCause.PROJECTILE, 2));
 
                 }
                 if (e.getHitBlock() != null){
@@ -245,7 +244,7 @@ public class listeners implements Listener {
             if (j.getMetadata("type").get(0).asString().equals("pyro.firethrower")) {
                 if (e.getHitEntity() != null) {
                     LivingEntity entity = (LivingEntity) e.getHitEntity();
-                    Player p = Bukkit.getPlayer(j.getMetadata("source").get(0).asString());
+                    Player p = (Player) j.getShooter();
                     e.setCancelled(true);
                     if ((entity instanceof Player && !PlayerManager.isInSameTeam(p, (Player) entity))) {
                         entity.setHealth(Math.max(0, entity.getHealth() - 1));
@@ -263,12 +262,11 @@ public class listeners implements Listener {
             if (j.getMetadata("type").get(0).asString().equalsIgnoreCase("pyro.fireball")) {
                 Set<LivingEntity> list = new HashSet<>();
                 list.addAll(e.getEntity().getLocation().getNearbyLivingEntities( 3));
-                list.remove(Bukkit.getPlayer(j.getMetadata("source").get(0).asString()));
-                list.remove(j);
+                list.remove((Player) j.getShooter());
                 for (LivingEntity l : list) {
                     if (l.getFireTicks() < 1) {
                         l.setHealth(Math.max(0, l.getHealth() - 6));
-                        l.setLastDamageCause(new EntityDamageEvent(Objects.requireNonNull(Bukkit.getPlayer(j.getMetadata("source").get(0).asString())), EntityDamageEvent.DamageCause.PROJECTILE, 4));
+                        l.setLastDamageCause(new EntityDamageEvent((Player) j.getShooter(), EntityDamageEvent.DamageCause.PROJECTILE, 4));
                     } else {
                         l.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 1, false, false, true));
                     }
@@ -277,6 +275,7 @@ public class listeners implements Listener {
             }
         }
     }
+    
     @EventHandler
     public void OnEntityDeath(EntityDeathEvent e){
         LivingEntity entity = e.getEntity();
@@ -303,7 +302,7 @@ public class listeners implements Listener {
             if (m.getResourceCurrent() < (double) m.getResourceMax() /10) {
                 e.setCancelled(true);
             }else if (!p.isFlying()){
-                m.setResourceDifferencePerSecond(-80);
+                m.setResourceDifferencePerSecond(-20);
                 p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 9999999, 1,false,false,true));
             }else{
                 m.setResourceDifferencePerSecond(m.getKit().getDefaultResourceDifferencePerSecond());
@@ -312,8 +311,7 @@ public class listeners implements Listener {
         }
     }
     @EventHandler
-    public void onBlockExplode(EntityExplodeEvent e) {
+    public void OnBlockExplode(EntityExplodeEvent e) {
         e.blockList().clear();
-
     }
 }

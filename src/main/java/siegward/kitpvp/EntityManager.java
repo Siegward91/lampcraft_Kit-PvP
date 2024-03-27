@@ -212,7 +212,7 @@ public class EntityManager {
             TNTPrimed tnt = (TNTPrimed) Bukkit.getWorld("world").spawnEntity(m.getEntity().getLocation(), EntityType.PRIMED_TNT);
             tnt.setFuseTicks(0);
             tnt.setSource(m.getSource());
-            tnt.setYield(2f);
+            tnt.setYield(3f);
             m.getEntity().getWorld().spawnParticle(Particle.EXPLOSION_LARGE, m.getEntity().getLocation(), 3);
         }
         deadMobs.add(m);

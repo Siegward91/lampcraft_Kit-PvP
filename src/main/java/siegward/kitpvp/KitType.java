@@ -14,18 +14,19 @@ public enum KitType {
     NECROMANCER некромант
     UNDEAD нежить
      */
+    NONE(0,0,100),
     KNIGHT(0, 0, 200),
     ASSASSIN(10, 100,100),
     MERC(10, 100, 100),
     ROYAL(10, 100, 100),
     STEAMPUNK(10, 0, 200),
     ROBIN(10, 100, 100),
-    CHAOTIC(10, 2000, 2000),
-    SATANIST(10, 2000, 2000),
-    PYRO(10, 2000, 2000),
-    CREEPERMAN(10, 2000, 2000),
-    NECROMANCER(10, 2000, 2000),
-    UNDEAD(10, 2000, 2000);
+    CHAOTIC(10, 200, 200),
+    SATANIST(10, 200, 200),
+    PYRO(10, 200, 200),
+    CREEPERMAN(10, 200, 200),
+    NECROMANCER(10, 200, 200),
+    UNDEAD(10, 200, 200);
 
     private final double defaultResourceDifferencePerSecond;
     private final double defaultStartingResource;
