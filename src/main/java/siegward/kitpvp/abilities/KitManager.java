@@ -1,9 +1,9 @@
-package siegward.kitpvp;
+package siegward.kitpvp.abilities;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.enchantments.Enchantment;
@@ -17,6 +17,12 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import siegward.kitpvp.KitPvP;
+import siegward.kitpvp.Managers.EntityManager;
+import siegward.kitpvp.Managers.EventManager;
+import siegward.kitpvp.Managers.PlayerManager;
+import siegward.kitpvp.Managers.PlayerModel;
+import siegward.kitpvp.utils.KitType;
 
 import java.util.*;
 
@@ -82,7 +88,6 @@ public class KitManager {
 
     }
     public static void knightRageOnKill(PlayerModel m){
-        Player p = m.getPlayer();
         if (m.getResourceDifferencePerSecond() == -20) {
             m.setResourceCurrent(m.getResourceMax());
         }
@@ -217,7 +222,7 @@ public class KitManager {
     }
 
     public static void robinBolt(PlayerModel m){
-        int cost = 75;
+        int cost = 60;
         int cooldown = 20;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
@@ -247,13 +252,13 @@ public class KitManager {
                             //надеюсь правильно
                             if (i instanceof Player || i.getType().equals(EntityType.PLAYER)){
                                 //в OnDamage уже проверка стоит
-
-                                i.damage(10.0);
+                                i.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING,60,0, false,false,true));
+                                i.damage(5.0 + (45.0/120)*time);
                                 i.setLastDamageCause(new EntityDamageEvent(p, EntityDamageEvent.DamageCause.PROJECTILE, 10));
                             }else {
                                 if (!(EntityManager.isInSameTeam(p, i))){
                                     //с мобами работает (странный cmi)
-                                    i.damage(8.0, p);
+                                    i.damage(10.0, p);
                                 }
                             }
                         }
@@ -271,17 +276,18 @@ public class KitManager {
     }
     //маги
     public static void magesTakesManaAfterKill(PlayerModel m) {
-        m.setResourceDifferencePerSecond(m.getResourceDifferencePerSecond()*20);
-        m.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 3, 1,false,false,true));
-        m.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 3, 1,false,false,true));
+        m.setResourceDifferencePerSecond(m.getResourceDifferencePerSecond()*10);
+        m.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 60, 1,false,false,true));
+        m.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 60, 1,false,false,true));
         BukkitRunnable PassiveManaRegeneration = new BukkitRunnable() {
             int timer = 0;
 
             @Override
             public void run() {
 
-                if (timer >= 40) {
+                if (timer >= 60) {
                     m.setResourceDifferencePerSecond(m.getKit().getDefaultResourceDifferencePerSecond());
+                    m.getPlayer().setFlying(false);
                     this.cancel();
                 }
                 timer++;
@@ -292,13 +298,12 @@ public class KitManager {
     }
 
     public static void chaoticSnowball(PlayerModel m){
-        int cost = 70;
+        int cost = 65;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
             Projectile j = p.launchProjectile(Snowball.class, p.getEyeLocation().getDirection().multiply(0.8));
-            j.setInvulnerable(true);
             j.setMetadata("type", new FixedMetadataValue(plugin, "chaotic.snowball"));
             j.setShooter(p);
         }
@@ -364,13 +369,13 @@ public class KitManager {
         }
     }
     public static void satanistJump(PlayerModel m){
-        int cooldown = 20*15;
+        int cooldown = 20*8;
         int cost = 20;
         Player p = m.getPlayer();
         Material item = p.getInventory().getItemInMainHand().getType();
         if (p.getCooldown(item) == 0 && m.getResourceCurrent() >= cost){
             m.setResourceCurrent(m.getResourceCurrent() - cost);
-            p.setVelocity(new Vector(0,2,0));
+            p.setVelocity(new Vector(0,1.2,0));
             p.setCooldown(item,cooldown);
         }
     }
@@ -689,14 +694,15 @@ public class KitManager {
 
     public static void soul(PlayerModel m){
         int index = 0;
+        List<Integer> indexes = new ArrayList<Integer>();
         int count = 0;
         Player p = m.getPlayer();
         if (m.getKit().equals(KitType.NONE)){
-            p.sendActionBar(Component.text("Без класса нельзя сдать души)))").color(NamedTextColor.DARK_RED));
+            p.sendActionBar(Component.text("Без класса нельзя сдать Души)))").color(NamedTextColor.DARK_RED));
             return;
         }
         if (!p.getInventory().contains(Material.NETHER_STAR)) {
-            p.sendActionBar(Component.text("У вас нет потерянных душ!").color(NamedTextColor.RED));
+            p.sendActionBar(Component.text("У вас нет потерянных Душ!").color(NamedTextColor.RED));
             return;
         }
         for (ItemStack item : p.getInventory()){
@@ -704,14 +710,41 @@ public class KitManager {
                 index++;
                 continue;
             }
-            if (item.getType().equals(Material.NETHER_STAR) && item.getItemMeta().displayName().equals(Component.text("Потерянная душа").decoration(TextDecoration.ITALIC, false).color(NamedTextColor.AQUA))){
-                p.getInventory().clear(index);
+            if (item.getType().equals(Material.NETHER_STAR) && item.getItemMeta().displayName().equals(Component.text("Потерянная Душа").decoration(TextDecoration.ITALIC, false).color(NamedTextColor.AQUA))){
+                indexes.add(index);
                 count+= item.getAmount();
+
             }
             index++;
         }
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "cmi money give " + p.getName() + " " + count);
-        //TODO сюда привязку статистики
-        // count - количество душ в инвентаре
+        int record = EventManager.getRecord();
+        if (record >= 0 && count <= record) {
+            p.sendActionBar(Component.text("Нужно больше " + record + " душ, чтобы побить рекорд!").color(NamedTextColor.DARK_RED));
+        }else {
+            for (int i : indexes) {
+                p.getInventory().clear(i);
+            }
+            if (record >= 0) {
+                EventManager.setRecord(count, p);
+            }
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "cmi money give " + p.getName() + " " + count);
+            for (Player i : Bukkit.getOnlinePlayers()) {
+                if (10 <= count && count < 20)
+                    i.showTitle(Title.title(Component.text(" "), Component.text(ChatColor.WHITE + p.getName() + " сжег " + ChatColor.YELLOW + count + ChatColor.WHITE + " Душ")));
+                else if (20 <= count && count < 30)
+                    i.showTitle(Title.title(Component.text(" "), Component.text(ChatColor.YELLOW + p.getName() + " сжег " + ChatColor.RED + count + ChatColor.YELLOW + " Душ!")));
+                else if (30 <= count && count < 40) {
+                    i.showTitle(Title.title(Component.text(" "), Component.text(ChatColor.RED + p.getName() + " сжег " + ChatColor.DARK_RED + ChatColor.BOLD + count + ChatColor.RED + " Душ!!!")));
+                    i.playSound(i.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2, 1);
+                } else if (40 <= count && count < 50) {
+                    i.showTitle(Title.title(Component.text(" "), Component.text(ChatColor.DARK_RED + "☠ " + ChatColor.RED + p.getName() + " сжег " + ChatColor.DARK_RED + ChatColor.BOLD + count + ChatColor.RED + " Душ!!!" + ChatColor.DARK_RED + " ☠")));
+                    i.playSound(i.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2, 1);
+                } else if (count >= 50) {
+                    i.showTitle(Title.title(Component.text(" "), Component.text("" + ChatColor.DARK_RED + "☠☠☠ " + ChatColor.BOLD + p.getName() + " СЖЕГ " + count + " ДУШ!!!" + ChatColor.DARK_RED + " ☠☠☠")));
+                    i.playSound(i.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, 2, 1);
+                }
+            }
+
+        }
     }
 }

@@ -1,4 +1,4 @@
-package siegward.kitpvp;
+package siegward.kitpvp.abilities;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -10,6 +10,12 @@ import org.bukkit.entity.*;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
+import siegward.kitpvp.Managers.EventManager;
+import siegward.kitpvp.abilities.KitManager;
+import siegward.kitpvp.Managers.PlayerManager;
+import siegward.kitpvp.Managers.PlayerModel;
+import siegward.kitpvp.utils.KitType;
+import siegward.kitpvp.utils.TeamType;
 
 
 public class commands implements CommandExecutor {
@@ -102,11 +108,12 @@ public class commands implements CommandExecutor {
                         PlayerManager.addPlayer(p,kit);
                         break;
                 }
+                p.setCooldown(Material.RED_MUSHROOM,p.getCooldown(Material.RED_MUSHROOM));
             }else if (args[0].equalsIgnoreCase("team") && args.length == 3){
                 Player p = Bukkit.getPlayer(args[2]);
                 switch (args[1]) {
                     case "red":
-                        PlayerManager.setPlayerTeam(p,TeamType.RED);
+                        PlayerManager.setPlayerTeam(p, TeamType.RED);
                         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team join RED " + p.getName());
                         break;
                     case "blue":
@@ -203,6 +210,13 @@ public class commands implements CommandExecutor {
                         break;
                 }
 
+            }else if (args[0].equalsIgnoreCase("event") && args.length >= 2){
+                if (args.length == 2 && args[1].equalsIgnoreCase("stop")){
+                    EventManager.stopAll();
+                }else if (args[1].equalsIgnoreCase("soul_hunt") && args.length == 5){
+                    EventManager.startSoulHunt(Integer.parseInt(args[2]), Integer.parseInt(args[3]), Integer.parseInt(args[4]));
+
+                }
             }
         }
         return true;

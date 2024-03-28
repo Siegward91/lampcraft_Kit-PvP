@@ -1,4 +1,4 @@
-package siegward.kitpvp;
+package siegward.kitpvp.Managers;
 
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -10,6 +10,8 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
+import siegward.kitpvp.KitPvP;
+import siegward.kitpvp.utils.TeamType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -193,7 +195,7 @@ public class EntityManager {
                 TNTPrimed tnt = (TNTPrimed) Bukkit.getWorld("world").spawnEntity(mob.getEntity().getLocation().add(0,1,0), EntityType.PRIMED_TNT);
                 tnt.setFuseTicks(0);
                 tnt.setSource(mob.getSource());
-                tnt.setYield(2f);
+                tnt.setYield(3f);
                 mob.getEntity().getWorld().spawnParticle(Particle.EXPLOSION_LARGE, mob.getEntity().getLocation(), 3);
                 mob.getEntity().setHealth(0);
                 tempMobList.add(mob);
@@ -230,51 +232,5 @@ public class EntityManager {
         MobModel mobModel = getModelByEntity(e);
         if (playerModel == null || mobModel == null || playerModel.getTeam() == null || PlayerManager.getModelByPlayer(mobModel.getSource()).getTeam() == null) return false;
         return playerModel.getTeam().equals(PlayerManager.getModelByPlayer(mobModel.getSource()).getTeam());
-    }
-}
-class MobModel {
-    private final LivingEntity entity;
-    private final Player source;
-    private final boolean alive;
-    private int ticksLived;
-    private int ticksLiveMax;
-
-    public void incrementTicksLived(int speed){
-        ticksLived += speed;
-    }
-
-    public MobModel(LivingEntity entity, Player source, boolean alive, int ticksLiveMax) {
-        this.entity = entity;
-        this.source = source;
-        this.alive = alive;
-        this.ticksLiveMax = ticksLiveMax;
-        ticksLived = 0;
-    }
-
-    public int getTicksLived() {
-        return ticksLived;
-    }
-
-    public void setTicksLived(int ticksLived) {
-        this.ticksLived = ticksLived;
-    }
-
-    public int getTicksLiveMax() {
-        return ticksLiveMax;
-    }
-
-    public void setTicksLiveMax(int ticksLiveMax) {
-        this.ticksLiveMax = ticksLiveMax;
-    }
-
-    public LivingEntity getEntity() {
-        return entity;
-    }
-
-    public Player getSource() {
-        return source;
-    }
-    public boolean isAlive() {
-        return alive;
     }
 }

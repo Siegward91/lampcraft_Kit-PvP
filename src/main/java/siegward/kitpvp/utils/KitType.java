@@ -1,4 +1,4 @@
-package siegward.kitpvp;
+package siegward.kitpvp.utils;
 
 public enum KitType {
     /*
@@ -23,7 +23,7 @@ public enum KitType {
     ROBIN(10, 100, 100),
     CHAOTIC(10, 200, 200),
     SATANIST(10, 200, 200),
-    PYRO(10, 200, 200),
+    PYRO(15, 200, 200),
     CREEPERMAN(10, 200, 200),
     NECROMANCER(10, 200, 200),
     UNDEAD(10, 200, 200);

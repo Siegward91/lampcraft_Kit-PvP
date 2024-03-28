@@ -1,4 +1,4 @@
-package siegward.kitpvp;
+package siegward.kitpvp.utils;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -20,6 +20,9 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import siegward.kitpvp.KitPvP;
+import siegward.kitpvp.Managers.*;
+import siegward.kitpvp.abilities.KitManager;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -33,7 +36,7 @@ public class listeners implements Listener {
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team modify " + e.getPlayer().getName() + "_p friendlyFire false");
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team modify " + e.getPlayer().getName() + "_p collisionRule never");
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "team join " + e.getPlayer().getName() + "_p " + e.getPlayer().getName());
-        PlayerManager.addPlayer(e.getPlayer(),KitType.NONE);
+        PlayerManager.addPlayer(e.getPlayer(), KitType.NONE);
     }
 
     @EventHandler
@@ -81,7 +84,7 @@ public class listeners implements Listener {
             if (targetModel.getKit().equals(KitType.KNIGHT)) {
                 KitManager.knightTakingDamage(targetModel, e);
             }
-        }else if(e.getEntity() instanceof Fireball){
+        }else if (e.getEntity() instanceof Fireball){
             e.setCancelled(true);
         }
     }
@@ -91,20 +94,22 @@ public class listeners implements Listener {
         Player p = e.getPlayer();
         PlayerModel playerModel = PlayerManager.getModelByPlayer(p);
         if (playerModel == null) return;
-        //if (playerModel.getCombatMode() > 0){
+
         int count = 0;
         for (ItemStack item : p.getInventory()){
             if (item == null) continue;
-            if (item.getType().equals(Material.NETHER_STAR) && item.getItemMeta().displayName().equals(Component.text("Потерянная душа").decoration(TextDecoration.ITALIC, false).color(NamedTextColor.AQUA))){
+            if (item.getType().equals(Material.NETHER_STAR) && item.getItemMeta().displayName().equals(Component.text("Потерянная Душа").decoration(TextDecoration.ITALIC, false).color(NamedTextColor.AQUA))){
                 count += item.getAmount();
             }
         }
-        ItemStack soul = new ItemStack(Material.NETHER_STAR,count+1);
-        ItemMeta soulItemMeta = soul.getItemMeta();
-        soulItemMeta.displayName(Component.text("Потерянная душа").decoration(TextDecoration.ITALIC, false).color(NamedTextColor.AQUA));
-        soul.setItemMeta(soulItemMeta);
-        p.getWorld().dropItem(p.getLocation(),soul);
-        //}
+        if (Bukkit.getOnlinePlayers().size() > 1) {
+            ItemStack soul = new ItemStack(Material.NETHER_STAR, count + 1);
+            ItemMeta soulItemMeta = soul.getItemMeta();
+            soulItemMeta.displayName(Component.text("Потерянная Душа").decoration(TextDecoration.ITALIC, false).color(NamedTextColor.AQUA));
+            soul.setItemMeta(soulItemMeta);
+            p.getWorld().dropItem(p.getLocation(), soul);
+
+        }
         PlayerManager.removePlayer(p);
 
         if (playerModel.getKit().equals(KitType.CREEPERMAN) || playerModel.getKit().equals(KitType.NECROMANCER) || playerModel.getKit().equals(KitType.UNDEAD)){
@@ -146,7 +151,7 @@ public class listeners implements Listener {
 
                 TNTPrimed tnt = (TNTPrimed) Bukkit.getWorld("world").spawnEntity(j.getLocation(), EntityType.PRIMED_TNT);
                 tnt.setFuseTicks(1);
-                tnt.setYield(2.2f);
+                tnt.setYield(2f);
                 tnt.setSource((Entity) j.getShooter());
                 j.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, j.getLocation(), 3);
             } else if (j.getMetadata("type").get(0).asString().equals("chaotic.cluster")) {
@@ -169,7 +174,7 @@ public class listeners implements Listener {
                     public void run() {
                         if (timer >= 80) this.cancel();
                         Set<LivingEntity> list = new HashSet<>();
-                        list.addAll(location.getNearbyLivingEntities(2,1));
+                        list.addAll(location.getNearbyLivingEntities(2.5,1));
                         Bukkit.getWorld("world").spawnParticle(Particle.SQUID_INK,location,20,1,0.2, 1,0);
                         Player p = (Player) j.getShooter();
                         for (LivingEntity l : list) {
@@ -224,7 +229,7 @@ public class listeners implements Listener {
             }
             //TODO менеджер еффектов и снарядов?
         }else if (j instanceof Arrow){
-            if ((j.getShooter() instanceof Player && PlayerManager.getModelByPlayer((Player) j.getShooter()).getKit().equals(KitType.STEAMPUNK)) && (j.getMetadata("type").get(0).asString().equalsIgnoreCase("steampunk.shotgun"))) {
+            if (!j.getMetadata("type").isEmpty() && j.getMetadata("type").get(0).asString().equalsIgnoreCase("steampunk.shotgun")) {
                 if (e.getHitEntity() != null) {
                     LivingEntity entity = (LivingEntity) e.getHitEntity();
                     //попытка сделать дробовик нормальным(имба обосраная)
